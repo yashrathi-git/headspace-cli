@@ -1,7 +1,7 @@
 # headspace-dl
 Python command line script to download heaspace packs and singles.
 <p align="center">
-<img src = "images/demo-f.gif" alt = "demo">
+<img src = "https://raw.githubusercontent.com/yashrathi-git/headspace-dl/main/images/demo-f.gif" alt = "demo">
 </p>
 
 ## Installation

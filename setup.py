@@ -18,7 +18,7 @@ URL = "https://github.com/yashrathi-git/headspace-dl"
 EMAIL = "yashrathicricket@gmail.com"
 AUTHOR = "Yash Rathi"
 REQUIRES_PYTHON = ">=3.6.0"
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 # What packages are required for this module to be executed?
 REQUIRED = ["requests", "Click", "rich"]
@@ -93,7 +93,6 @@ setup(
     url=URL,
     packages=find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*"]),
     install_requires=REQUIRED,
-    extras_require=EXTRAS,
     include_package_data=True,
     license="MIT",
     classifiers=[
