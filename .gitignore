@@ -1,3 +1,5 @@
 /headspace_dl/__pycache__
 /headspace_dl.egg-info
 /debug.log
+/dist
+/build
