@@ -1,0 +1,3 @@
+Click==7.0
+requests==2.22.0
+rich==9.13.0
