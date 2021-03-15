@@ -279,7 +279,7 @@ def pack(
     """
     if not type(duration) == list or type(duration) == tuple:
         raise click.BadParameter(duration)
-    if url == "" and id_ <= 0:
+    if url == "" and id <= 0:
         raise click.BadParameter("Please provide ID or URL.")
 
     duration = list(set(duration))
