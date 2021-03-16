@@ -42,14 +42,13 @@ After we have installed `headspace-dl`, this is important step to set it up:
 
 6. Run:
    ```sh
-   headspace file
+   headspace init
    ```
-7. It will give you location for `bearer_id.txt` file. Open this file.
-8. Paste `authorization` value here and save the file. Setup is done!
+7. Paste `authorization` value(bearer id) here. Setup is done!
 
 
 **NOTE**:<br />
-`authorization` token could invalidate in the future. So if you get an authentication error, please repeat the above steps. 
+`authorization` token could invalidate in the future. So if you get an authentication(Unauthorized) error, please repeat the above steps. 
 
 ## Usage
 First, make sure to follow <a href="#setup">setup instructions</a><br>
@@ -88,7 +87,7 @@ headspace pack https://my.headspace.com/packs/33 --duration "[20, 15, 10]"
 
 ```
 **NOTE**:<br />
-`authorization` token(bearer id) could invalidate after some time. So if you get an authentication error, please repeat <a href="#setup">setup</a> instructions.
+`authorization` token(bearer id) could invalidate after some time. So if you get an authentication(Unauthorized) error, please repeat <a href="#setup">setup</a> instructions.
 
 ### Download single session
 ```sh
@@ -108,9 +107,14 @@ headspace download https://my.headspace.com/play/520 --duration "[15,20]"
 --help               Show this message and exit.
 ```
 **NOTE**:<br />
-`authorization` token(bearer id) could invalidate after some time. So if you get an authentication error, please repeat <a href="#setup">setup</a> instructions.
+`authorization` token(bearer id) could invalidate after some time. So if you get an authentication(Unauthorized) error, please repeat <a href="#setup">setup</a> instructions.
 
 ### Display location for `bearer_id.txt` file
 ```sh
 headspace file
+```
+
+### Add `bearer id` for authentication
+```sh
+headspace init
 ```
