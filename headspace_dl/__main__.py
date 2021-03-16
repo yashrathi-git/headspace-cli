@@ -435,4 +435,20 @@ def display_file_location():
     console.print(f'bearer_id.txt file is located at "{BEARER}"')
 
 
+@cli.command("init")
+def write_bearer():
+    """
+    Setup `bearer id`
+    """
+    console.print(
+        "Don't know what is bearer_id? Please read "
+        "[green]https://github.com/yashrathi-git/headspace-dl#setup[/green]"
+    )
+    console.print("Please paste bearer_id below:")
+    bearer_id = input()
+
+    with open(BEARER, "w") as file:
+        file.write(bearer_id)
+
+
 session.close()
