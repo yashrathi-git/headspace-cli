@@ -1,8 +1,13 @@
 # headspace-dl
-Python command line script to download heaspace packs and singles.
+Python command line script to download heaspace packs and singles. It could download all headspace packs at once.
 <p align="center">
 <img src = "https://raw.githubusercontent.com/yashrathi-git/headspace-dl/main/images/demo-f.gif" alt = "demo">
 </p>
+
+## Release History
+* 2.1.0
+   * New Feature, to download all packs with one command
+   * Minor improvements
 
 ## Installation
 ### Install with pip
@@ -34,9 +39,9 @@ After we have installed `headspace-dl`, this is important step to set it up:
 
 6. Run:
    ```sh
-   headspace
+   headspace file
    ```
-7. When you run it the first time, it will give you location for `bearer_id.txt` file. Open this file.
+7. It will give you location for `bearer_id.txt` file. Open this file.
 8. Paste `authorization` value here and save the file. Setup is done!
 
 
@@ -51,6 +56,9 @@ headspace pack <URL> [Options]
 ```
 **Basic:**
 ```sh
+# Download all packs from headspace with 15 minute session duration
+headspace pack --all --duration 15
+
 # Download with all session of duration 15 minutes
 headspace pack https://my.headspace.com/packs/33 --duration 15 
 
@@ -60,15 +68,24 @@ headspace pack https://my.headspace.com/packs/33 --duration "[20, 15, 10]"
 ```
 **Options:**
 ```sh
-  -d, --duration        Duration or list of duration 
-  --no_meditation       Only download meditation session without any techniques
-                        videos.
+--id INTEGER         ID of video.
+-d, --duration       Duration or list of duration
+--no_meditation      Only download meditation session without techniques
+                    videos.
 
-  --no_techniques       Only download techniques and not meditation sessions.
-  --out TEXT            Download directory
-  --help                Show this message and exit.
+--no_techniques      Only download techniques and not meditation sessions.
+--out TEXT           Download directory
+--all                Downloads all headspace packs.
+-e, --exclude TEXT   To be used with `--all` flag only. Location of text
+                    file with links of packs to exclude downloading. Every
+                    link should be on separate line.
+
+--help               Show this message and exit.
+
 
 ```
+**NOTE**:<br />
+`authorization` token(bearer id) could invalidate after some time. So if you get an authentication error, please repeat <a href="#setup">setup</a> instructions.
 
 ### Download single session
 ```sh
@@ -86,4 +103,11 @@ headspace download https://my.headspace.com/play/520 --duration "[15,20]"
 --id INTEGER         ID of the video. Not required if URL is provided.
 -d, --duration       Duration or list of duration
 --help               Show this message and exit.
+```
+**NOTE**:<br />
+`authorization` token(bearer id) could invalidate after some time. So if you get an authentication error, please repeat <a href="#setup">setup</a> instructions.
+
+### Display location for `bearer_id.txt` file
+```sh
+headspace file
 ```

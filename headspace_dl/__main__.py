@@ -1,14 +1,15 @@
-import requests
-import os
-import click
-import re
 import logging
-from typing import Union, List, Optional
+import os
+import re
+from ast import literal_eval
+from time import sleep
+from typing import List, Optional, Union
+
+import click
+import requests
 from rich.console import Console
 from rich.progress import track
-from ast import literal_eval
 from rich.traceback import install
-
 
 install()
 
@@ -81,8 +82,14 @@ def request_url(
         logging.info("Sending GET request to {}".format(url))
 
     response = session.get(url)
-    response_js: dict = response.json()
-
+    try:
+        response_js: dict = response.json()
+    except:
+        logging.critical(f"Invalid JSON data with status code {response.status_code}")
+        console.print(repr(response))
+        console.print("Invalid JSON data. DATA=")
+        console.print(response.text)
+        raise click.Abort()
     if not response.ok:
         console.print(response_js)
         if "errors" in response_js.keys():
@@ -112,10 +119,20 @@ def get_pack_attributes(
     out: str,
     no_techniques: bool,
     no_meditation: bool,
+    all_: bool = False,
 ):
     response = request_url(PACK_URL, id=pack_id)
     attributes: dict = response["data"]["attributes"]
     _pack_name: str = attributes["name"]
+
+    if all_:
+        exists = os.path.exists(os.path.join(out, _pack_name))
+        if exists:
+            console.print(
+                "[red]Aborting [/red] download of "
+                f"{_pack_name} because it already exists."
+            )
+            return
     # Logging
     logging.info(f"Downloading pack, name: {_pack_name}")
 
@@ -171,7 +188,9 @@ def download_pack_techniques(
             sign_id = item["id"]
             break
     direct_url = request_url(SIGN_URL, id=sign_id)["url"]
-    download(direct_url, name, filename=name, pack_name=pack_name, out=out)
+    download(
+        direct_url, name, filename=name, pack_name=pack_name, out=out, is_technique=True
+    )
 
 
 def download(
@@ -181,6 +200,7 @@ def download(
     filename: str,
     pack_name: Optional[str] = None,
     out: str,
+    is_technique: bool = False,
 ):
     console.print(f"[green]Downloading {name}[/green]")
     logging.info(f"Downloading {name}")
@@ -203,14 +223,27 @@ def download(
 
     if pack_name:
         dir_path = os.path.join(out, pack_name)
+        pattern = r"Session \d+ of (Level \d+)"
+        level = re.findall(pattern, filename)
+        if level:
+            dir_path = os.path.join(dir_path, level[0])
+
+        if is_technique:
+            dir_path = os.path.join(dir_path, "Techniques")
         try:
-            os.mkdir(dir_path)
+            os.makedirs(dir_path)
         except FileExistsError:
             pass
         filepath = os.path.join(dir_path, filename)
     else:
         filepath = os.path.join(out, filename)
 
+    if os.path.exists(filepath):
+        console.print(
+            f"[red]Aborting [/red]download of '{filename}' as it already exists "
+            f"at '{filepath}'.\nIf you want to download session please delete [green]'{filepath}'[/green]"
+        )
+        return
     with open(filepath, "wb") as file:
         for chunk in track(
             media.iter_content(chunk_size=chunk_size),
@@ -266,6 +299,18 @@ def cli():
     default=False,
 )
 @click.option("--out", default="", help="Download directory")
+@click.option(
+    "--all", "all_", default=False, is_flag=True, help="Downloads all headspace packs."
+)
+@click.option(
+    "--exclude",
+    "-e",
+    default="",
+    help=(
+        "To be used with `--all` flag only. Location of text file for"
+        " links of packs to exclude downloading. Every link should be on separate line."
+    ),
+)
 def pack(
     id: int,
     duration: Union[list, tuple],
@@ -273,14 +318,15 @@ def pack(
     no_techniques: bool,
     no_meditation: bool,
     url: str,
+    all_: bool,
+    exclude: str,
 ):
     """
     Download headspace pack with techniques videos.
     """
+
     if not type(duration) == list or type(duration) == tuple:
         raise click.BadParameter(duration)
-    if url == "" and id <= 0:
-        raise click.BadParameter("Please provide ID or URL.")
 
     duration = list(set(duration))
 
@@ -291,20 +337,59 @@ def pack(
         except:
             raise click.BadParameter(duration)
 
-        if not (d == 10 or d == 15 or d == 20):
-            raise click.BadParameter("Duration could only be list of 10, 15 or 20.")
+        if not (d == 10 or d == 15 or d == 20 or d == 1 or d == 3):
+            raise click.BadParameter("Duration could only be list of 1,3,10, 15 or 20")
+    if not all_:
+        if url == "" and id <= 0:
+            raise click.BadParameter("Please provide ID or URL.")
+        if url:
+            pattern = r"my.headspace.com/packs/([0-9]+)"
+            id = find_id(pattern, url)
 
-    if url:
-        pattern = r"my.headspace.com/packs/([0-9]+)"
-        id = find_id(pattern, url)
+        get_pack_attributes(
+            pack_id=id,
+            duration=duration,
+            out=out,
+            no_meditation=no_meditation,
+            no_techniques=no_techniques,
+        )
+    else:
+        excluded = []
+        if exclude:
+            pattern = r"my.headspace.com/packs/([0-9]+)"
+            try:
+                with open(exclude, "r") as file:
+                    links = file.readlines()
+            except FileNotFoundError:
+                raise click.BadOptionUsage("exclude", "Exclude file not found.")
+            for link in links:
+                exclude_id = re.findall(pattern, link)
+                if exclude_id:
+                    excluded.append(int(exclude_id[0]))
+                else:
+                    console.print(f"[yellow]Unable to parse: {link}[/yellow]")
+        pack_id = 1
+        console.print("[red]Downloading all packs[/red]")
+        logging.info("Downloading all packs")
+        while True:
+            if pack_id not in excluded:
+                get_pack_attributes(
+                    pack_id=pack_id,
+                    duration=duration,
+                    out=out,
+                    no_meditation=no_meditation,
+                    no_techniques=no_techniques,
+                    all_=True,
+                )
+            else:
+                logging.info(f"Skipping ID: {pack_id} as it is excluded")
 
-    get_pack_attributes(
-        pack_id=id,
-        duration=duration,
-        out=out,
-        no_meditation=no_meditation,
-        no_techniques=no_techniques,
-    )
+            pack_id += 1
+            # console.print(
+            #     "Sleeping for 2 second, before downloading next pack."
+            #     " Use `Ctrl+C` to abort."
+            # )
+            # sleep(2)
 
 
 @cli.command("download")
@@ -341,6 +426,14 @@ def download_single(url: str, out: str, id_: int, duration: Union[list, tuple]):
     else:
         id = id_
     download_pack_session(id, duration, None, out)
+
+
+@cli.command("file")
+def display_file_location():
+    """
+    Display `bearer_id.txt` file location.
+    """
+    console.print(f'bearer_id.txt file is located at "{BEARER}"')
 
 
 session.close()
