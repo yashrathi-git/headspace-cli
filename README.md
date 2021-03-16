@@ -8,7 +8,8 @@ Python command line script to download heaspace packs and singles. It could down
 * 2.1.0
    * New Feature, to download all packs with one command
    * Minor improvements
-
+* 2.1.2
+   * Fixed minor bugs
 ## Installation
 ### Install with pip
 ```sh
