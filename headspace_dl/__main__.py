@@ -50,7 +50,6 @@ logging.basicConfig(filename=LOG_FILE, level=logging.INFO)
 if not BEARER_ID:
     error = "Bearer id not found."
     console.print(f"[red]{error}[/red]")
-    console.print(f"Location of bearer_id.txt file: {BEARER}")
     logging.critical(error)
 
 session = requests.Session()
