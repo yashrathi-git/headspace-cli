@@ -12,6 +12,9 @@ Python command line script to download heaspace packs and singles. It could down
    * Fixed minor bugs
 * 2.1.3
    * Added `init` argument
+* 2.1.4
+   * No core changes
+   * Updated docs
 ## Installation
 ### Install with pip
 ```sh
