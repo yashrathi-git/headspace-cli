@@ -268,6 +268,7 @@ def find_id(pattern: str, url: str):
 
 
 @click.group()
+@click.version_option()
 def cli():
     """
     Download headspace packs or individual meditation and techniques.

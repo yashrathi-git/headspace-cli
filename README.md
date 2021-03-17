@@ -40,10 +40,15 @@ After we have installed `headspace-dl`, this is important step to set it up:
    bearer eyJhbGciOi...
    ```
 
-6. Run:
+6. Run(if version>=2.1.3):
    ```sh
    headspace init
    ```
+   If version is less than 2.1.3, run:
+   ```sh
+   headspace file
+   ```
+   This will print the location of `bearer_id.txt` file. If it already have content, please make sure to delete it.
 7. Paste `authorization` value(bearer id) here. Setup is done!
 
 
