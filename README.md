@@ -120,6 +120,7 @@ headspace file
 ```
 
 ### Add `bearer id` for authentication
+Added in 2.1.3
 ```sh
 headspace init
 ```
