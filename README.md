@@ -61,6 +61,8 @@ After we have installed `headspace-dl`, this is important step to set it up:
 ## Usage
 First, make sure to follow <a href="#setup">setup instructions</a><br>
 ### Downloading Headspace packs
+**Experimental Feature**
+Please be aware, that `--all`, flag is currently an experimental feature. It might not work as intended.
 ```sh
 headspace pack <URL> [Options]
 ```
