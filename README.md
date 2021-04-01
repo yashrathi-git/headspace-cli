@@ -8,7 +8,7 @@ Python command line script to download heaspace packs, singles or everyday heads
 ## Installation
 ### Install with pip
 ```sh
-pip install headspace-dl
+pip install pyheadspace
 ```
 ### Install latest version
 1. Clone this repo:
