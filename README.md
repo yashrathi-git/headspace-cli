@@ -13,7 +13,7 @@ pip install pyheadspace
 ### Install latest version
 1. Clone this repo:
    ```sh
-   git clone https://github.com/yashrathi-git/headspace-dl 
+   git clone https://github.com/yashrathi-git/pyHeadspace 
    ```
 2. Navigate to the cloned folder.
 3. To install run:
