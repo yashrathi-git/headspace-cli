@@ -14,8 +14,8 @@ from rich.traceback import install
 install()
 
 BASEDIR = os.path.dirname(os.path.realpath(__file__))
-LOG_FILE = os.path.join(BASEDIR, "..", "debug.log")
-BEARER = os.path.abspath(os.path.join(BASEDIR, "..", "bearer_id.txt"))
+LOG_FILE = os.path.join(BASEDIR, "debug.log")
+BEARER = os.path.abspath(os.path.join(BASEDIR, "bearer_id.txt"))
 
 AUDIO_URL = "https://api.prod.headspace.com/content/activities/{}"
 PACK_URL = "https://api.prod.headspace.com/content/activity-groups/{}"
@@ -210,7 +210,7 @@ def download(
         media_json = media.json()
         console.print(media_json)
         logging.error(media_json)
-        raise click.UsageError(f"HTTP error: status-code = {response.status_code}")
+        raise click.UsageError(f"HTTP error: status-code = {media.status_code}")
 
     media_type = media.headers.get("content-type").split("/")[-1]
     filename += f".{media_type}"
@@ -218,7 +218,7 @@ def download(
     chunk_size = 1024
 
     if not os.path.exists(out) and os.path.isdir(out):
-        raise click.BadOptionUsage(f"{out} path not valid")
+        raise click.BadOptionUsage("--out", f"'{out}' path not valid")
 
     if pack_name:
         dir_path = os.path.join(out, pack_name)
