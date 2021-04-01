@@ -1,20 +1,10 @@
 # headspace-dl
-Python command line script to download heaspace packs and singles. It could download all headspace packs at once.
+Python command line script to download heaspace packs, singles or everyday headspace OR download all packs at once.
 <p align="center">
 <img src = "https://raw.githubusercontent.com/yashrathi-git/headspace-dl/main/images/demo-f.gif" alt = "demo">
 </p>
 
-## Release History
-* 2.1.0
-   * New Feature, to download all packs with one command
-   * Minor improvements
-* 2.1.2
-   * Fixed minor bugs
-* 2.1.3
-   * Added `init` argument
-* 2.1.4
-   * No core changes
-   * Updated docs
+
 ## Installation
 ### Install with pip
 ```sh
@@ -60,17 +50,41 @@ After we have installed `headspace-dl`, this is important step to set it up:
 
 ## Usage
 First, make sure to follow <a href="#setup">setup instructions</a><br>
-### Downloading Headspace packs
-**Experimental Feature**<br />
-Please be aware, that `--all`, flag is currently an experimental feature. It might not work as intended.
+### Download all packs at once
+```sh
+# Download all packs of duration 15 minutes
+headspace pack --all --duration 15
+
+# Download all packs of duration 10,20 minutes
+headspace pack --all --duration "[10,20]"
+```
+**Exclude specific packs from downloading**
+<br />
+
+To exclude specific packs from downloading use `--exclude` option.
+<br />
+It expects location of text file for links of packs to exclude downloading. Every link should be on separate line.<br><br>
+**links.txt**:
+```
+https://my.headspace.com/packs/5
+https://my.headspace.com/packs/6
+```
+**command**
+```sh
+headspace packs --all --exclude links.txt
+```
+This would download all packs except the ones in `links.txt` file
+
+### Downloading Headspace pack
 ```sh
 headspace pack <URL> [Options]
 ```
-**Basic:**
-```sh
-# Download all packs from headspace with 15 minute session duration
-headspace pack --all --duration 15
+It expects URL in format `https://my.headspace.com/packs/<int>`
 
+<br />
+
+**BASIC USAGE**
+```sh
 # Download with all session of duration 15 minutes
 headspace pack https://my.headspace.com/packs/33 --duration 15 
 
@@ -81,19 +95,16 @@ headspace pack https://my.headspace.com/packs/33 --duration "[20, 15, 10]"
 **Options:**
 ```sh
 --id INTEGER         ID of video.
--d, --duration       Duration or list of duration
+-d, --duration TEXT  Duration or list of duration
 --no_meditation      Only download meditation session without techniques
                     videos.
-
 --no_techniques      Only download techniques and not meditation sessions.
 --out TEXT           Download directory
 --all                Downloads all headspace packs.
--e, --exclude TEXT   To be used with `--all` flag only. Location of text
-                    file with links of packs to exclude downloading. Every
-                    link should be on separate line.
-
+-e, --exclude TEXT   Use with `--all` flag. Location of text file with links
+                    of packs to exclude downloading. Every link should be
+                    on separate line.
 --help               Show this message and exit.
-
 
 ```
 **NOTE**:<br />
@@ -103,7 +114,12 @@ headspace pack https://my.headspace.com/packs/33 --duration "[20, 15, 10]"
 ```sh
 headspace download <URL> [options]
 ```
-**Basic:**
+
+It expects URL in format `https://my.headspace.com/play/<int>`
+
+<br />
+
+**BASIC USAGE**
 ```sh
 headspace download https://my.headspace.com/play/520 --duration 15
 # Download sessions of multiple durations
@@ -119,13 +135,44 @@ headspace download https://my.headspace.com/play/520 --duration "[15,20]"
 **NOTE**:<br />
 `authorization` token(bearer id) could invalidate after some time. So if you get an authentication(Unauthorized) error, please repeat <a href="#setup">setup</a> instructions.
 
+### Download everyday meditations
+```sh
+headspace everyday [OPTIONS]
+```
+**How to get your user id?** <br>
+1. Go to https://my.headspace.com/everyday-headspace/info
+2. Open developer tools using `Ctrl + Shift + I` or `Command + Shift + C`
+3. Go to network tab and reload the webpage
+4. Find a request made to URL: https://api.prod.headspace.com/content/view-models/everyday-headspace-banner
+5. You would find your userId as query parameter in the URL.
+<br>
+
+**BASIC USAGE**
+```sh
+# Downloads today's meditation
+headspace everyday --userid <YOUR USER ID>
+
+# Download everyday meditation of specific time period.
+# DATE FORMAT: yyyy-mm-dd
+headspace everyday --from 2021-03-01 --to 2021-03-20 --userid <YOUR USER ID>
+```
+**Options**
+```
+--userid TEXT
+--from TEXT          Start download from specific date. DATE-FORMAT=>yyyy-
+                    mm-dd
+--to TEXT            Download till a specific date. DATE-FORMAT=>yyyy-mm-dd
+-d, --duration TEXT  Duration or list of duration
+--out TEXT           Download directory
+--help               Show this message and exit.
+```
+
 ### Display location for `bearer_id.txt` file
 ```sh
 headspace file
 ```
 
 ### Add `bearer id` for authentication
-Added in 2.1.3
 ```sh
 headspace init
 ```

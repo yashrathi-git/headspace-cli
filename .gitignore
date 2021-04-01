@@ -7,3 +7,5 @@
 /headspace_dl/bearer_id.txt
 /headspace_dl/debug.log
 /test.py
+
+/headspace_dl/group_ids.py

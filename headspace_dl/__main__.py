@@ -25,6 +25,7 @@ TECHNIQUE_URL = "https://api.prod.headspace.com/content/techniques/{}"
 EVERYDAY_URL = (
     "https://api.prod.headspace.com/content/view-models/everyday-headspace-banner"
 )
+GROUP_COLLECTION = "https://api.prod.headspace.com/content/group-collections"
 
 if not os.path.exists(BEARER):
     with open(BEARER, "w") as file:
@@ -71,6 +72,20 @@ class PythonLiteralOption(click.Option):
             return out
         except:
             raise click.BadParameter(value)
+
+
+def get_group_ids():
+    params = {"category": "PACK_GROUP", "limit": "-1"}
+    response = request_url(GROUP_COLLECTION, params=params)
+    data = response["included"]
+    pack_ids = []
+    for item in data:
+        try:
+            id = item["relationships"]["activityGroup"]["data"]["id"]
+        except KeyError:
+            pass
+        pack_ids.append(int(id))
+    return sorted(pack_ids)
 
 
 def request_url(
@@ -141,6 +156,11 @@ def get_pack_attributes(
     console.print(f'[green]Name: [/green] {attributes["name"]}')
     console.print(f'[green]Description: [/green] {attributes["description"]}')
 
+    if all_ is True:
+        console.print(f"URL: https://my.headspace.com/packs/{pack_id}")
+        console.print(
+            "Use [green]--exclude[/green] option to exclude downloading this pack."
+        )
     data = response["included"]
     for item in data:
         if item["type"] == "orderedActivities":
@@ -189,7 +209,7 @@ def get_signed_url(response: dict, duration: List[int]) -> dict:
         console.print(
             "This session is available with duration of "
             f"{'/'.join(str(d) for d in duration)} minutes. "
-            "Use [green]--duration[/green] argument to modify required duration."
+            "Use [green]--duration[/green] option to modify required duration."
             "\n[red]([bold]Ctrl+C[/bold] to terminate)[/red]"
         )
         logging.warning(msg)
@@ -289,11 +309,11 @@ def find_id(pattern: str, url: str):
         id = int(re.findall(pattern, url)[-1])
     except ValueError:
         raise click.UsageError(
-            "Cannot find the ID. Please use --id argument to provide the ID."
+            "Cannot find the ID. Please use --id option to provide the ID."
         )
     except IndexError:
         raise click.UsageError(
-            "Cannot find the ID. Please use --id argument to provide the ID."
+            "Cannot find the ID. Please use --id option to provide the ID."
         )
     return id
 
@@ -338,7 +358,7 @@ def cli():
     "-e",
     default="",
     help=(
-        "To be used with `--all` flag only. Location of text file for"
+        "Use with `--all` flag. Location of text file for"
         " links of packs to exclude downloading. Every link should be on separate line."
     ),
 )
@@ -353,7 +373,7 @@ def pack(
     exclude: str,
 ):
     """
-    Download headspace pack with techniques videos.
+    Download headspace packs with techniques videos.
     """
 
     if not type(duration) == list or type(duration) == tuple:
@@ -399,10 +419,13 @@ def pack(
                     excluded.append(int(exclude_id[0]))
                 else:
                     console.print(f"[yellow]Unable to parse: {link}[/yellow]")
-        pack_id = 1
+
         console.print("[red]Downloading all packs[/red]")
         logging.info("Downloading all packs")
-        while True:
+
+        group_ids = get_group_ids()
+
+        for pack_id in group_ids:
             if pack_id not in excluded:
                 get_pack_attributes(
                     pack_id=pack_id,
@@ -414,13 +437,6 @@ def pack(
                 )
             else:
                 logging.info(f"Skipping ID: {pack_id} as it is excluded")
-
-            pack_id += 1
-            # console.print(
-            #     "Sleeping for 2 second, before downloading next pack."
-            #     " Use `Ctrl+C` to abort."
-            # )
-            # sleep(2)
 
 
 @cli.command("download")
@@ -485,8 +501,19 @@ def write_bearer():
 
 @cli.command("everyday")
 @click.option("--userid", type=str, prompt="User ID")
-@click.option("--from", "_from", type=str, default=date.today().strftime("%Y-%m-%d"))
-@click.option("--to", type=str, default=date.today().strftime("%Y-%m-%d"))
+@click.option(
+    "--from",
+    "_from",
+    type=str,
+    default=date.today().strftime("%Y-%m-%d"),
+    help="Start download from specific date. DATE-FORMAT=>yyyy-mm-dd",
+)
+@click.option(
+    "--to",
+    type=str,
+    default=date.today().strftime("%Y-%m-%d"),
+    help="Download till a specific date. DATE-FORMAT=>yyyy-mm-dd",
+)
 @click.option(
     "-d",
     "--duration",
@@ -496,6 +523,9 @@ def write_bearer():
 )
 @click.option("--out", default="", help="Download directory")
 def everyday(userid: str, _from: str, to: str, duration: Union[list, tuple], out: str):
+    """
+    Download everyday headspace.
+    """
     date_format = "%Y-%m-%d"
     _from = datetime.strptime(_from, date_format).date()
     to = datetime.strptime(to, date_format).date()
