@@ -4,6 +4,7 @@ import re
 from ast import literal_eval
 from time import sleep
 from typing import List, Optional, Union
+from datetime import date, timedelta, datetime
 
 import click
 import requests
@@ -21,6 +22,9 @@ AUDIO_URL = "https://api.prod.headspace.com/content/activities/{}"
 PACK_URL = "https://api.prod.headspace.com/content/activity-groups/{}"
 SIGN_URL = "https://api.prod.headspace.com/content/media-items/{}/make-signed-url"
 TECHNIQUE_URL = "https://api.prod.headspace.com/content/techniques/{}"
+EVERYDAY_URL = (
+    "https://api.prod.headspace.com/content/view-models/everyday-headspace-banner"
+)
 
 if not os.path.exists(BEARER):
     with open(BEARER, "w") as file:
@@ -70,17 +74,14 @@ class PythonLiteralOption(click.Option):
 
 
 def request_url(
-    url: str,
-    *,
-    id: Union[str, int] = None,
-    mute: bool = False,
+    url: str, *, id: Union[str, int] = None, mute: bool = False, params: dict = {}
 ):
     url = url.format(id)
     if not mute:
         # console.print("Sending [green]GET[/green] request to {}".format(url))
         logging.info("Sending GET request to {}".format(url))
 
-    response = session.get(url)
+    response = session.get(url, params=params)
     try:
         response_js: dict = response.json()
     except:
@@ -152,18 +153,22 @@ def get_pack_attributes(
                 download_pack_techniques(id, pack_name=_pack_name, out=out)
 
 
-def download_pack_session(
-    id: Union[int, str], duration: List[int], pack_name: Optional[str], out: str
-):
-    response = request_url(AUDIO_URL, id=id)
+def get_signed_url(response: dict, duration: List[int]) -> dict:
     data = response["included"]
-
+    signed_links = {}
+    av_duration = []
     for item in data:
-        name = response["data"]["attributes"]["name"]
+        try:
+            name = response["data"]["attributes"]["name"]
+        except KeyError:
+            name = response["data"]["attributes"]["titleText"]
         if item["type"] != "mediaItems":
             continue
-        duration_in_min = round_off(int(item["attributes"]["durationInMs"]))
-
+        try:
+            duration_in_min = round_off(int(item["attributes"]["durationInMs"]))
+        except KeyError:
+            continue
+        av_duration.append(duration_in_min)
         if duration_in_min not in duration:
             continue
 
@@ -172,6 +177,32 @@ def download_pack_session(
         direct_url = request_url(SIGN_URL, id=sign_id)["url"]
         if len(duration) > 1:
             name += f"({duration_in_min} minutes)"
+
+        signed_links[name] = direct_url
+    if len(signed_links) == 0:
+        msg = (
+            f"Cannot download {name}. This could be"
+            " because this session might not be available in "
+            f"{', '.join(str(d) for d in duration)} min duration."
+        )
+        console.print(f"[yellow]{msg}[yellow]")
+        console.print(
+            "This session is available with duration of "
+            f"{'/'.join(str(d) for d in duration)} minutes. "
+            "Use [green]--duration[/green] argument to modify required duration."
+            "\n[red]([bold]Ctrl+C[/bold] to terminate)[/red]"
+        )
+        logging.warning(msg)
+    return signed_links
+
+
+def download_pack_session(
+    id: Union[int, str], duration: List[int], pack_name: Optional[str], out: str
+):
+    response = request_url(AUDIO_URL, id=id)
+
+    signed_url = get_signed_url(response, duration=duration)
+    for name, direct_url in signed_url.items():
         download(direct_url, name, filename=name, pack_name=pack_name, out=out)
 
 
@@ -450,6 +481,37 @@ def write_bearer():
 
     with open(BEARER, "w") as file:
         file.write(bearer_id)
+
+
+@cli.command("everyday")
+@click.option("--userid", type=str, prompt="User ID")
+@click.option("--from", "_from", type=str, default=date.today().strftime("%Y-%m-%d"))
+@click.option("--to", type=str, default=date.today().strftime("%Y-%m-%d"))
+@click.option(
+    "-d",
+    "--duration",
+    cls=PythonLiteralOption,
+    help="Duration or list of duration",
+    default="[15,]",
+)
+@click.option("--out", default="", help="Download directory")
+def everyday(userid: str, _from: str, to: str, duration: Union[list, tuple], out: str):
+    date_format = "%Y-%m-%d"
+    _from = datetime.strptime(_from, date_format).date()
+    to = datetime.strptime(to, date_format).date()
+
+    while _from <= to:
+        params = {
+            "date": _from.strftime(date_format),
+            "userId": userid,
+        }
+        response = request_url(EVERYDAY_URL, params=params)
+
+        signed_url = get_signed_url(response, duration=duration)
+
+        for name, direct_url in signed_url.items():
+            download(direct_url, name, filename=name, out=out)
+        _from += timedelta(days=1)
 
 
 session.close()
