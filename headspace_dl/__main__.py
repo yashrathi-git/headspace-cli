@@ -13,7 +13,7 @@ from rich.progress import track
 from rich.traceback import install
 
 install()
-
+# print("NEW")
 BASEDIR = os.path.dirname(os.path.realpath(__file__))
 LOG_FILE = os.path.join(BASEDIR, "debug.log")
 BEARER = os.path.abspath(os.path.join(BASEDIR, "bearer_id.txt"))
@@ -72,6 +72,32 @@ class PythonLiteralOption(click.Option):
             return out
         except:
             raise click.BadParameter(value)
+
+
+URL_GROUP_CMD = [
+    click.option("--id", type=int, default=0, help="ID of video."),
+    click.argument("url", type=str, default="", required=False),
+]
+
+COMMON_CMD = [
+    click.option(
+        "-d",
+        "--duration",
+        cls=PythonLiteralOption,
+        help="Duration or list of duration",
+        default="[15,]",
+    ),
+    click.option("--out", default="", help="Download directory"),
+]
+
+
+def shared_cmd(cmd):
+    def _shared_cmd(func):
+        for option in reversed(cmd):
+            func = option(func)
+        return func
+
+    return _shared_cmd
 
 
 def get_group_ids():
@@ -287,6 +313,8 @@ def download(
             pass
         filepath = os.path.join(dir_path, filename)
     else:
+        if not os.path.exists(out) and out!="":
+            raise click.UsageError(message=f"'{out}' path does not exists.")
         filepath = os.path.join(out, filename)
 
     if os.path.exists(filepath):
@@ -329,15 +357,6 @@ def cli():
 
 
 @cli.command("pack")
-@click.argument("url", type=str, default="", required=False)
-@click.option("--id", type=int, default=0, help="ID of video.")
-@click.option(
-    "-d",
-    "--duration",
-    cls=PythonLiteralOption,
-    help="Duration or list of duration",
-    default="[15,]",
-)
 @click.option(
     "--no_meditation",
     is_flag=True,
@@ -350,7 +369,6 @@ def cli():
     help="Only download techniques and not meditation sessions.",
     default=False,
 )
-@click.option("--out", default="", help="Download directory")
 @click.option(
     "--all", "all_", default=False, is_flag=True, help="Downloads all headspace packs."
 )
@@ -363,6 +381,8 @@ def cli():
         " links of packs to exclude downloading. Every link should be on separate line."
     ),
 )
+@shared_cmd(COMMON_CMD)
+@shared_cmd(URL_GROUP_CMD)
 def pack(
     id: int,
     duration: Union[list, tuple],
@@ -441,39 +461,20 @@ def pack(
 
 
 @cli.command("download")
-@click.argument(
-    "url",
-    type=str,
-    required=False,
-    default="",
-)
-@click.option("--out", default="", help="Download directory.")
-@click.option(
-    "--id",
-    "id_",
-    type=int,
-    default=0,
-    help="ID of the video. Not required if URL is provided.",
-)
-@click.option(
-    "-d",
-    "--duration",
-    cls=PythonLiteralOption,
-    help="Duration or list of duration",
-    default="[15,]",
-)
-def download_single(url: str, out: str, id_: int, duration: Union[list, tuple]):
+@shared_cmd(COMMON_CMD)
+@shared_cmd(URL_GROUP_CMD)
+def download_single(url: str, out: str, id: int, duration: Union[list, tuple]):
     """
     Download single headspace meditation.
     """
-    if url == "" and id_ <= 0:
+    if url == "" and id <= 0:
         raise click.BadParameter("Please provide ID or URL.")
     pattern = r"my.headspace.com/play/([0-9]+)"
-    if not id_ > 0:
-        id = find_id(pattern, url)
+    if not id > 0:
+        final_id = find_id(pattern, url)
     else:
-        id = id_
-    download_pack_session(id, duration, None, out)
+        final_id = id
+    download_pack_session(final_id, duration, None, out)
 
 
 @cli.command("file")
@@ -515,14 +516,7 @@ def write_bearer():
     default=date.today().strftime("%Y-%m-%d"),
     help="Download till a specific date. DATE-FORMAT=>yyyy-mm-dd",
 )
-@click.option(
-    "-d",
-    "--duration",
-    cls=PythonLiteralOption,
-    help="Duration or list of duration",
-    default="[15,]",
-)
-@click.option("--out", default="", help="Download directory")
+@shared_cmd(COMMON_CMD)
 def everyday(userid: str, _from: str, to: str, duration: Union[list, tuple], out: str):
     """
     Download everyday headspace.
