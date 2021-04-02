@@ -11,6 +11,10 @@ Python command line script to download heaspace packs, singles or everyday heads
 pip install pyheadspace
 ```
 ### Install latest version
+```sh
+pip install git+https://github.com/yashrathi-git/pyHeadspace.git
+```
+### Edit source code
 1. Clone this repo:
    ```sh
    git clone https://github.com/yashrathi-git/pyHeadspace 
