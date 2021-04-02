@@ -208,7 +208,7 @@ def get_signed_url(response: dict, duration: List[int]) -> dict:
         console.print(f"[yellow]{msg}[yellow]")
         console.print(
             "This session is available with duration of "
-            f"{'/'.join(str(d) for d in duration)} minutes. "
+            f"{'/'.join(str(d) for d in av_duration)} minutes. "
             "Use [green]--duration[/green] option to modify required duration."
             "\n[red]([bold]Ctrl+C[/bold] to terminate)[/red]"
         )
