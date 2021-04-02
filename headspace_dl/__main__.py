@@ -123,7 +123,8 @@ def round_off(time: int):
         time -= unit_place
     elif unit_place > 5:
         time -= unit_place - 5
-
+    if time == 0:
+        time = 1
     return time
 
 
@@ -388,8 +389,8 @@ def pack(
         except:
             raise click.BadParameter(duration)
 
-        if not (d == 10 or d == 15 or d == 20 or d == 1 or d == 3):
-            raise click.BadParameter("Duration could only be list of 1,3,10, 15 or 20")
+        # if not (d == 10 or d == 15 or d == 20 or d == 1 or d == 3):
+        #     raise click.BadParameter("Duration could only be list of 1,3,10, 15 or 20")
     if not all_:
         if url == "" and id <= 0:
             raise click.BadParameter("Please provide ID or URL.")
