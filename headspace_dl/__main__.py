@@ -2,9 +2,9 @@ import logging
 import os
 import re
 from ast import literal_eval
+from datetime import date, datetime, timedelta
 from time import sleep
 from typing import List, Optional, Union
-from datetime import date, timedelta, datetime
 
 import click
 import requests
@@ -13,7 +13,7 @@ from rich.progress import track
 from rich.traceback import install
 
 install()
-# print("NEW")
+
 BASEDIR = os.path.dirname(os.path.realpath(__file__))
 LOG_FILE = os.path.join(BASEDIR, "debug.log")
 BEARER = os.path.abspath(os.path.join(BASEDIR, "bearer_id.txt"))
@@ -98,6 +98,12 @@ def shared_cmd(cmd):
         return func
 
     return _shared_cmd
+
+
+def check_bearer_id(bearer_id):
+    if "…" in bearer_id:
+        return False
+    return True
 
 
 def get_group_ids():
@@ -313,7 +319,7 @@ def download(
             pass
         filepath = os.path.join(dir_path, filename)
     else:
-        if not os.path.exists(out) and out!="":
+        if not os.path.exists(out) and out != "":
             raise click.UsageError(message=f"'{out}' path does not exists.")
         filepath = os.path.join(out, filename)
 
@@ -496,6 +502,15 @@ def write_bearer():
     )
     console.print("Please paste bearer_id below:")
     bearer_id = input()
+
+    if not check_bearer_id(bearer_id):
+        console.print(
+            "\n[red]The bearer ID is invalid. It "
+            "is incomplete as it contains '…' in it[/red]. \n[green]Please copy the"
+            " ID by right click on the attribute 'authentication' and "
+            "then 'copy value' to copy full value.[/green]"
+        )
+        raise click.UsageError("Bearer ID not complete")
 
     with open(BEARER, "w") as file:
         file.write(bearer_id)
