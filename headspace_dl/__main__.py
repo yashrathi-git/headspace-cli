@@ -507,7 +507,7 @@ def write_bearer():
         console.print(
             "\n[red]The bearer ID is invalid. It "
             "is incomplete as it contains '…' in it[/red]. \n[green]Please copy the"
-            " ID by right click on the attribute 'authentication' and "
+            " ID by right click on the attribute 'authorization' and "
             "then 'copy value' to copy full value.[/green]"
         )
         raise click.UsageError("Bearer ID not complete")
