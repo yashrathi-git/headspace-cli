@@ -1,5 +1,5 @@
 # pyHeadspace
-Python command line script to download heaspace packs, singles or everyday headspace OR download all packs at once.
+Python command line script to download headspace packs, singles or everyday headspace OR download all packs at once.
 <p align="center">
 <img src = "https://raw.githubusercontent.com/yashrathi-git/headspace-dl/main/images/demo-f.gif" alt = "demo">
 </p>
