@@ -1,7 +1,7 @@
 # pyHeadspace
 Python command line script to download headspace packs, singles or everyday headspace OR download all packs at once.
 <p align="center">
-<img src = "./demo-2.png" alt = "demo">
+<img src = "https://raw.githubusercontent.com/yashrathi-git/pyHeadspace/main/demo-2.png" alt = "demo">
 </p>
 
 
@@ -26,6 +26,8 @@ pip install git+https://github.com/yashrathi-git/pyHeadspace.git
    ```
 
 ## Setup
+For older version(1.x.x) setup instructions visit this [link](https://github.com/yashrathi-git/pyHeadspace/blob/main/README_v_1-0-7.md)<br>
+
 Run and enter login credentials.
 ```sh
 headspace login
@@ -128,7 +130,7 @@ headspace everyday [OPTIONS]
 1. Go to https://my.headspace.com/everyday-headspace/info
 2. Open developer tools using `Ctrl + Shift + I` or `Command + Shift + C`
 3. Go to network tab and reload the webpage
-4. Find a request made to URL: https://api.prod.headspace.com/content/view-models/everyday-headspace-banner
+4. Find a GET request made to URL: https://api.prod.headspace.com/content/view-models/everyday-headspace-banner
 5. You would find your userId as query parameter in the URL.
 <br>
 
