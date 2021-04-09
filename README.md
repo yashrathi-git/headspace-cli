@@ -1,7 +1,7 @@
 # pyHeadspace
 Python command line script to download headspace packs, singles or everyday headspace OR download all packs at once.
 <p align="center">
-<img src = "https://raw.githubusercontent.com/yashrathi-git/headspace-dl/main/images/demo-f.gif" alt = "demo">
+<img src = "./demo-2.png" alt = "demo">
 </p>
 
 
@@ -26,29 +26,18 @@ pip install git+https://github.com/yashrathi-git/pyHeadspace.git
    ```
 
 ## Setup
-After we have installed `headspace-dl`, this is important step to set it up:
+Run and enter login credentials.
+```sh
+headspace login
+```
 
-1. Go to https://my.headspace.com/ and login to your account.
-2. Press `Ctrl + Shift + I` or `Command + Shift + C` to open dev tools
-3. Go to the networks tab and **reload the website**
-4. Now look for GET request to https://api.prod.headspace.com
-5. In **request header** copy the value of authorization parameter. **Make sure you copy it from request headers not response headers**. It would look like this:
-   ```
-   bearer eyJhbGciOi...
-   ```
-
-6. Run:
-   ```sh
-   headspace init
-   ```
-7. Paste `authorization` value(bearer id) here. Setup is done!
-
-
-**NOTE**:<br />
-`authorization` token could invalidate in the future. So if you get an authentication(Unauthorized) error, please repeat the above steps. 
+ 
 
 ## Usage
-First, make sure to follow <a href="#setup">setup instructions</a><br>
+### Login
+```sh
+headspace login
+```
 ### Download all packs at once
 ```sh
 # Download all packs of duration 15 minutes
@@ -106,8 +95,6 @@ headspace pack https://my.headspace.com/packs/33 --duration "[20, 15, 10]"
 --help               Show this message and exit.
 
 ```
-**NOTE**:<br />
-`authorization` token(bearer id) could invalidate after some time. So if you get an authentication(Unauthorized) error, please repeat <a href="#setup">setup</a> instructions.
 
 ### Download single session
 ```sh
@@ -131,8 +118,7 @@ headspace download https://my.headspace.com/play/520 --duration "[15,20]"
 -d, --duration       Duration or list of duration
 --help               Show this message and exit.
 ```
-**NOTE**:<br />
-`authorization` token(bearer id) could invalidate after some time. So if you get an authentication(Unauthorized) error, please repeat <a href="#setup">setup</a> instructions.
+
 
 ### Download everyday meditations
 ```sh
@@ -166,12 +152,6 @@ headspace everyday --from 2021-03-01 --to 2021-03-20 --userid <YOUR USER ID>
 --help               Show this message and exit.
 ```
 
-### Display location for `bearer_id.txt` file
-```sh
-headspace file
-```
 
-### Add `bearer id` for authentication
-```sh
-headspace init
-```
+
+

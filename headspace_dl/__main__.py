@@ -54,7 +54,7 @@ console = Console()
 logging.basicConfig(filename=LOG_FILE, level=logging.INFO)
 
 if not BEARER_ID:
-    error = "Failed to login. Please run- [green]headspace login[/green] to login."
+    error = "Failed to login. Run- [green]headspace login[/green] to login."
     console.print(f"[red]{error}[/red]")
 
 session = requests.Session()

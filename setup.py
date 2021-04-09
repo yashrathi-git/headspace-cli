@@ -18,7 +18,7 @@ URL = "https://github.com/yashrathi-git/headspace-dl"
 EMAIL = "yashrathicricket@gmail.com"
 AUTHOR = "Yash Rathi"
 REQUIRES_PYTHON = ">=3.6.0"
-VERSION = "1.0.7"
+VERSION = "2.0.0"
 
 REQUIRED = ["requests", "Click", "rich"]
 
