@@ -11,6 +11,7 @@ import requests
 from rich.console import Console
 from rich.progress import track
 from rich.traceback import install
+from headspace_dl.auth import authenticate, prompt
 
 install()
 
@@ -53,9 +54,8 @@ console = Console()
 logging.basicConfig(filename=LOG_FILE, level=logging.INFO)
 
 if not BEARER_ID:
-    error = "Bearer id not found."
+    error = "Failed to login. Please run- [green]headspace login[/green] to login."
     console.print(f"[red]{error}[/red]")
-    logging.critical(error)
 
 session = requests.Session()
 session.headers.update(headers)
@@ -138,10 +138,14 @@ def request_url(
         console.print(response.text)
         raise click.Abort()
     if not response.ok:
-        console.print(response_js)
         if "errors" in response_js.keys():
-            logging.error(response_js["errors"])
+            errors = response_js["errors"]
+            logging.error(errors)
+            if response.status_code == 401:
+                console.print("\n[red]Unautorized[/red]")
+                console.print("Run [green]headspace login[/green] first.")
         else:
+            console.print(response_js)
             logging.error(response_js)
         raise click.UsageError(f"HTTP error: status-code = {response.status_code}")
     return response_js
@@ -491,17 +495,10 @@ def display_file_location():
     console.print(f'bearer_id.txt file is located at "{BEARER}"')
 
 
-@cli.command("init")
-def write_bearer():
+def write_bearer(bearer_id):
     """
     Setup `bearer id`
     """
-    console.print(
-        "Don't know what is bearer_id? Please read "
-        "[green]https://github.com/yashrathi-git/headspace-dl#setup[/green]"
-    )
-    console.print("Please paste bearer_id below:")
-    bearer_id = input()
 
     if not check_bearer_id(bearer_id):
         console.print(
@@ -552,6 +549,16 @@ def everyday(userid: str, _from: str, to: str, duration: Union[list, tuple], out
         for name, direct_url in signed_url.items():
             download(direct_url, name, filename=name, out=out)
         _from += timedelta(days=1)
+
+
+@cli.command("login")
+def login():
+    email, password = prompt()
+    bearer_token = authenticate(email, password)
+    if bearer_token == False:
+        raise click.Abort()
+    write_bearer(bearer_token)
+    console.print("[green]:heavy_check_mark:[/green] Logged in successfully!")
 
 
 session.close()
