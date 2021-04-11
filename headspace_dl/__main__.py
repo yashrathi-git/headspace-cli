@@ -11,6 +11,7 @@ import requests
 from rich.console import Console
 from rich.progress import track
 from rich.traceback import install
+
 from headspace_dl.auth import authenticate, prompt
 
 install()
