@@ -145,6 +145,8 @@ def request_url(
             if response.status_code == 401:
                 console.print("\n[red]Unautorized[/red]")
                 console.print("Run [green]headspace login[/green] first.")
+            else:
+                console.print(errors)
         else:
             console.print(response_js)
             logging.error(response_js)
