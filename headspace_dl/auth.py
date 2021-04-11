@@ -1,6 +1,7 @@
-import requests
-import re
 import json
+import re
+
+import requests
 from rich.console import Console
 
 LOGIN_URL = "https://www.headspace.com/login"
