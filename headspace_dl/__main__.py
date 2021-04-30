@@ -126,7 +126,6 @@ def request_url(
 ):
     url = url.format(id)
     if not mute:
-        # console.print("Sending [green]GET[/green] request to {}".format(url))
         logging.info("Sending GET request to {}".format(url))
 
     response = session.get(url, params=params)
@@ -184,8 +183,7 @@ def get_pack_attributes(
         exists = os.path.exists(os.path.join(out, _pack_name))
         if exists:
             console.print(
-                "[red]Aborting [/red] download of "
-                f"{_pack_name} because it already exists."
+                f"{_pack_name} already exists [red]skipping... [/red]"
             )
             return
     # Logging
@@ -332,8 +330,7 @@ def download(
 
     if os.path.exists(filepath):
         console.print(
-            f"[red]Aborting [/red]download of '{filename}' as it already exists "
-            f"at '{filepath}'.\nIf you want to download session please delete [green]'{filepath}'[/green]"
+            f"'{filename}' already exists [red]skipping...[/red]"
         )
         return
     with open(filepath, "wb") as file:
@@ -351,11 +348,11 @@ def find_id(pattern: str, url: str):
         id = int(re.findall(pattern, url)[-1])
     except ValueError:
         raise click.UsageError(
-            "Cannot find the ID. Please use --id option to provide the ID."
+            "Cannot find the ID. Use --id option to provide the ID."
         )
     except IndexError:
         raise click.UsageError(
-            "Cannot find the ID. Please use --id option to provide the ID."
+            "Cannot find the ID. Use --id option to provide the ID."
         )
     return id
 
@@ -422,8 +419,6 @@ def pack(
         except:
             raise click.BadParameter(duration)
 
-        # if not (d == 10 or d == 15 or d == 20 or d == 1 or d == 3):
-        #     raise click.BadParameter("Duration could only be list of 1,3,10, 15 or 20")
     if not all_:
         if url == "" and id <= 0:
             raise click.BadParameter("Please provide ID or URL.")
