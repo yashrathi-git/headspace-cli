@@ -12,7 +12,6 @@ pip install --upgrade pyheadspace
 
 
 ### This tool is only meant for personal use. Do not use this for piracy!
-***
 ## Setup
 
 Run and enter login credentials.
