@@ -1,4 +1,4 @@
-import logging
+import logging as log
 import os
 import re
 from ast import literal_eval
@@ -17,7 +17,6 @@ from headspace_dl.auth import authenticate, prompt
 install()
 
 BASEDIR = os.path.dirname(os.path.realpath(__file__))
-LOG_FILE = os.path.join(BASEDIR, "debug.log")
 BEARER = os.path.abspath(os.path.join(BASEDIR, "bearer_id.txt"))
 
 AUDIO_URL = "https://api.prod.headspace.com/content/activities/{}"
@@ -52,11 +51,8 @@ headers = {
 }
 
 console = Console()
-logging.basicConfig(filename=LOG_FILE, level=logging.INFO)
+logging = log.getLogger("pyHeadspace")
 
-if not BEARER_ID:
-    error = "Failed to login. Run- [green]headspace login[/green] to login."
-    console.print(f"[red]{error}[/red]")
 
 session = requests.Session()
 session.headers.update(headers)
@@ -134,7 +130,7 @@ def request_url(
     except:
         logging.critical(f"Invalid JSON data with status code {response.status_code}")
         console.print(repr(response))
-        console.print("Invalid JSON data. DATA=")
+        console.print("Unexpected response. Try again after sometime. DATA=")
         console.print(response.text)
         raise click.Abort()
     if not response.ok:
@@ -142,7 +138,7 @@ def request_url(
             errors = response_js["errors"]
             logging.error(errors)
             if response.status_code == 401:
-                console.print("\n[red]Unautorized[/red]")
+                console.print("\n[red]Unautorized : Unable to login to headspace account[/red]")
                 console.print("Run [green]headspace login[/green] first.")
             else:
                 console.print(errors)
@@ -291,7 +287,6 @@ def download(
     is_technique: bool = False,
 ):
     console.print(f"[green]Downloading {name}[/green]")
-    logging.info(f"Downloading {name}")
     logging.info(f"Sending GET request to {direct_url}")
     media = requests.get(direct_url, stream=True)
 

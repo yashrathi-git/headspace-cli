@@ -1,32 +1,19 @@
 # pyHeadspace
-Python command line script to download headspace packs, singles or everyday headspace OR download all packs at once.
+Command line script to download headspace packs, singles or everyday headspace OR download all packs at once.
 <p align="center">
 <img src = "https://raw.githubusercontent.com/yashrathi-git/pyHeadspace/main/images/demo-f.gif" alt = "demo">
 </p>
 
 
 ## Installation
-### Install with pip
 ```sh
-pip install pyheadspace
+pip install --upgrade pyheadspace
 ```
-### Install latest version
-```sh
-pip install git+https://github.com/yashrathi-git/pyHeadspace.git
-```
-### Edit source code
-1. Clone this repo:
-   ```sh
-   git clone https://github.com/yashrathi-git/pyHeadspace 
-   ```
-2. Navigate to the cloned folder.
-3. To install run:
-   ```sh
-   pip install --editable .
-   ```
 
+
+### This tool is only meant for personal use. Do not use this for piracy!
+***
 ## Setup
-For older version(1.x.x) setup instructions visit this [link](https://github.com/yashrathi-git/pyHeadspace/blob/main/README_v_1-0-7.md)<br>
 
 Run and enter login credentials.
 ```sh
@@ -36,19 +23,16 @@ headspace login
  
 
 ## Usage
-### Login
+
+## Download all packs at once
 ```sh
-headspace login
-```
-### Download all packs at once
-```sh
-# Download all packs of duration 15 minutes
+# Download all packs with each session of duration 15 minutes
 headspace pack --all --duration 15
 
-# Download all packs of duration 10,20 minutes
+# Download all packs with session duration of 10 & 20 minutes
 headspace pack --all --duration "[10,20]"
 ```
-**Exclude specific packs from downloading**
+**Exclude specific packs from downloading:**
 <br />
 
 To exclude specific packs from downloading use `--exclude` option.
@@ -65,7 +49,7 @@ headspace packs --all --exclude links.txt
 ```
 This would download all packs except the ones in `links.txt` file
 
-### Downloading Headspace pack
+## Downloading specific Headspace pack
 ```sh
 headspace pack <URL> [Options]
 ```
@@ -98,7 +82,7 @@ headspace pack https://my.headspace.com/packs/33 --duration "[20, 15, 10]"
 
 ```
 
-### Download single session
+## Download single session
 ```sh
 headspace download <URL> [options]
 ```
@@ -122,7 +106,7 @@ headspace download https://my.headspace.com/play/520 --duration "[15,20]"
 ```
 
 
-### Download everyday meditations
+## Download everyday meditations
 ```sh
 headspace everyday [OPTIONS]
 ```
@@ -154,6 +138,7 @@ headspace everyday --from 2021-03-01 --to 2021-03-20 --userid <YOUR USER ID>
 --help               Show this message and exit.
 ```
 
+**If you encounter any issue or bug, open a new issue on [github](https://github.com/yashrathi-git/pyHeadspace)**
 
 
 

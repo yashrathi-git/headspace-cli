@@ -31,8 +31,8 @@ def get_client_id():
 
 
 def prompt():
-    email = console.input(f"[bold red]?[/] [green]Email:[/green] ")
-    password = console.input(f"[bold red]?[/] [green]Password:[/green] ", password=True)
+    email = console.input(f"[bold red]?[/] Email: ")
+    password = console.input(f"[bold red]?[/] Password: ", password=True)
 
     return email, password
 
