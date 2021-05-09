@@ -9,7 +9,8 @@ Command line script to download headspace packs, singles or everyday headspace O
 ```sh
 pip install --upgrade pyheadspace
 ```
-
+* If installing using `pip install --user`, you must add the user-level bin directory to your PATH environment variable in order to use pyheadspace. If you are using a Unix derivative (FreeBSD, GNU / Linux, OS X), you can achieve this by using `export PATH="$HOME/.local/bin:$PATH"` command.
+* Make sure you are using version 2.0.2 or above, otherwise many features might not work. After install check the version by running `headspace --version`
 
 ### This tool is only meant for personal use. Do not use this for piracy!
 ## Setup
@@ -110,11 +111,8 @@ headspace download https://my.headspace.com/play/520 --duration "[15,20]"
 headspace everyday [OPTIONS]
 ```
 **How to get your user id?** <br>
-1. Go to https://my.headspace.com/everyday-headspace/info
-2. Open developer tools using `Ctrl + Shift + I` or `Command + Shift + C`
-3. Go to network tab and reload the webpage
-4. Find a GET request made to URL: https://api.prod.headspace.com/content/view-models/everyday-headspace-banner
-5. You would find your userId as query parameter in the URL.
+1. First goto https://www.headspace.com/login and login with your credentials
+2. Go to https://webviews.headspace.com/data and get the `User ID`
 <br>
 
 **BASIC USAGE**
