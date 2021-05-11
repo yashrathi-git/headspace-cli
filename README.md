@@ -1,11 +1,13 @@
 # pyHeadspace
-Command line script to download headspace packs, singles or everyday headspace OR download all packs at once.
+Command line script to download headspace packs, singles or everyday meditation.
 <p align="center">
 <img src = "https://raw.githubusercontent.com/yashrathi-git/pyHeadspace/main/images/demo-f.gif" alt = "demo">
 </p>
 
+## 👶 Dependencies
+* [Python 3.6 or higher](https://www.python.org/downloads/)
 
-## Installation
+## 🛠️ Installation
 ```sh
 pip install --upgrade pyheadspace
 ```
@@ -13,7 +15,7 @@ pip install --upgrade pyheadspace
 * Make sure you are using version 2.0.2 or above, otherwise many features might not work. After install check the version by running `headspace --version`
 
 ### This tool is only meant for personal use. Do not use this for piracy!
-## Setup
+## ⚙️ Setup
 
 Run and enter login credentials.
 ```sh
@@ -22,7 +24,7 @@ headspace login
 
  
 
-## Usage
+## 🚀 Usage
 
 ## Download all packs at once
 ```sh
@@ -93,9 +95,9 @@ It expects URL in format `https://my.headspace.com/play/<int>`
 
 **BASIC USAGE**
 ```sh
-headspace download https://my.headspace.com/play/520 --duration 15
+$ headspace download https://my.headspace.com/play/520 --duration 15
 # Download sessions of multiple durations
-headspace download https://my.headspace.com/play/520 --duration "[15,20]"
+$ headspace download https://my.headspace.com/play/520 --duration "[15,20]"
 ```
 **Options:**
 ```sh
