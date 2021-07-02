@@ -12,3 +12,5 @@
 /pyheadspace.egg-info
 
 /headspace_dl/test.html
+/venv/
+.idea
