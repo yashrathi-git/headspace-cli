@@ -1,13 +1,15 @@
 import logging as log
-import os
-import re
+from os import makedirs
+from os.path import dirname, realpath, abspath, join, exists, isdir
+from sys import platform
+from re import findall
 from ast import literal_eval
 from datetime import date, datetime, timedelta
 from time import sleep
 from typing import List, Optional, Union
 
 import click
-import requests
+from requests import Session, get
 from rich.console import Console
 from rich.progress import track
 from rich.traceback import install
@@ -16,8 +18,12 @@ from headspace_dl.auth import authenticate, prompt
 
 install()
 
-BASEDIR = os.path.dirname(os.path.realpath(__file__))
-BEARER = os.path.abspath(os.path.join(BASEDIR, "bearer_id.txt"))
+if platform == "linux" or platform == "linux2":
+    BASEDIR = dirname(join(realpath("~"), ".local/headspace_dl/"))
+    makedirs(BASEDIR)
+else:
+    BASEDIR = dirname(realpath(__file__))
+BEARER = abspath(join(BASEDIR, "bearer_id.txt"))
 
 AUDIO_URL = "https://api.prod.headspace.com/content/activities/{}"
 PACK_URL = "https://api.prod.headspace.com/content/activity-groups/{}"
@@ -28,7 +34,7 @@ EVERYDAY_URL = (
 )
 GROUP_COLLECTION = "https://api.prod.headspace.com/content/group-collections"
 
-if not os.path.exists(BEARER):
+if not exists(BEARER):
     with open(BEARER, "w") as file:
         file.write("")
 
@@ -54,7 +60,7 @@ console = Console()
 logging = log.getLogger("pyHeadspace")
 
 
-session = requests.Session()
+session = Session()
 session.headers.update(headers)
 
 
@@ -176,7 +182,7 @@ def get_pack_attributes(
     _pack_name: str = attributes["name"]
 
     if all_:
-        exists = os.path.exists(os.path.join(out, _pack_name))
+        exists = exists(join(out, _pack_name))
         if exists:
             console.print(
                 f"{_pack_name} already exists [red]skipping... [/red]"
@@ -288,7 +294,7 @@ def download(
 ):
     console.print(f"[green]Downloading {name}[/green]")
     logging.info(f"Sending GET request to {direct_url}")
-    media = requests.get(direct_url, stream=True)
+    media = get(direct_url, stream=True)
 
     if not media.ok:
         media_json = media.json()
@@ -301,29 +307,29 @@ def download(
     total_length = int(media.headers.get("content-length"))
     chunk_size = 1024
 
-    if not os.path.exists(out) and os.path.isdir(out):
+    if not exists(out) and isdir(out):
         raise click.BadOptionUsage("--out", f"'{out}' path not valid")
 
     if pack_name:
-        dir_path = os.path.join(out, pack_name)
+        dir_path = join(out, pack_name)
         pattern = r"Session \d+ of (Level \d+)"
-        level = re.findall(pattern, filename)
+        level = findall(pattern, filename)
         if level:
-            dir_path = os.path.join(dir_path, level[0])
+            dir_path = join(dir_path, level[0])
 
         if is_technique:
-            dir_path = os.path.join(dir_path, "Techniques")
+            dir_path = join(dir_path, "Techniques")
         try:
-            os.makedirs(dir_path)
+            makedirs(dir_path)
         except FileExistsError:
             pass
-        filepath = os.path.join(dir_path, filename)
+        filepath = join(dir_path, filename)
     else:
-        if not os.path.exists(out) and out != "":
+        if not exists(out) and out != "":
             raise click.UsageError(message=f"'{out}' path does not exists.")
-        filepath = os.path.join(out, filename)
+        filepath = join(out, filename)
 
-    if os.path.exists(filepath):
+    if exists(filepath):
         console.print(
             f"'{filename}' already exists [red]skipping...[/red]"
         )
@@ -340,7 +346,7 @@ def download(
 
 def find_id(pattern: str, url: str):
     try:
-        id = int(re.findall(pattern, url)[-1])
+        id = int(findall(pattern, url)[-1])
     except ValueError:
         raise click.UsageError(
             "Cannot find the ID. Use --id option to provide the ID."
@@ -438,7 +444,7 @@ def pack(
             except FileNotFoundError:
                 raise click.BadOptionUsage("exclude", "Exclude file not found.")
             for link in links:
-                exclude_id = re.findall(pattern, link)
+                exclude_id = findall(pattern, link)
                 if exclude_id:
                     excluded.append(int(exclude_id[0]))
                 else:
