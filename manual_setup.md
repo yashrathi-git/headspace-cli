@@ -15,11 +15,7 @@ After we have installed `headspace-dl`, this is important step to set it up:
    bearer eyJhbGciOi...
    ```
 
-6. Run:
-   ```sh
-   headspace init
-   ```
-7. Paste `authorization` value(bearer id) here. Setup is done!
+6. Run `headspace file` to get the location of the file. Paste the bearer token from the above step in this file.
 
 **NOTE**:<br />
 `authorization` token could invalidate in the future. So if you get an authentication(Unauthorized) error, please repeat the above steps.

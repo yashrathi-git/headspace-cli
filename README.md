@@ -21,6 +21,8 @@ Run and enter login credentials.
 ```sh
 headspace login
 ```
+If you use other form of authentication like google(do not have username and password), you could follow
+[these steps](https://github.com/yashrathi-git/pyHeadspace/blob/main/manual_setup.md)
 
  
 
