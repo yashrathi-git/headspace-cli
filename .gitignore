@@ -1,16 +1,16 @@
-/headspace_dl/__pycache__
+/pyheadspace/__pycache__
 /headspace_dl.egg-info
 /debug.log
 /dist
 /build
 /bearer_id.txt
-/headspace_dl/bearer_id.txt
-/headspace_dl/debug.log
+/pyheadspace/bearer_id.txt
+/pyheadspace/debug.log
 /test.py
 
-/headspace_dl/group_ids.py
+/pyheadspace/group_ids.py
 /pyheadspace.egg-info
 
-/headspace_dl/test.html
+/pyheadspace/test.html
 /venv/
 .idea

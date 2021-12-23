@@ -1,22 +1,24 @@
 import logging as log
 import os
 import re
-from ast import literal_eval
 from datetime import date, datetime, timedelta
-from time import sleep
 from typing import List, Optional, Union
 
+from appdirs import user_data_dir
 import click
 import requests
 from rich.console import Console
 from rich.progress import track
 from rich.traceback import install
 
-from headspace_dl.auth import authenticate, prompt
+from pyheadspace.auth import authenticate, prompt
 
+# For better tracebacks
 install()
 
-BASEDIR = os.path.dirname(os.path.realpath(__file__))
+BASEDIR = user_data_dir("pyheadspace")
+if not os.path.exists(BASEDIR):
+    os.mkdir(BASEDIR)
 BEARER = os.path.abspath(os.path.join(BASEDIR, "bearer_id.txt"))
 
 AUDIO_URL = "https://api.prod.headspace.com/content/activities/{}"
@@ -58,19 +60,6 @@ session = requests.Session()
 session.headers.update(headers)
 
 
-class PythonLiteralOption(click.Option):
-    def type_cast_value(self, ctx, value):
-        try:
-            out = literal_eval(value)
-            if type(out) == int or type(out) == str:
-                return [
-                    out,
-                ]
-            return out
-        except:
-            raise click.BadParameter(value)
-
-
 URL_GROUP_CMD = [
     click.option("--id", type=int, default=0, help="ID of video."),
     click.argument("url", type=str, default="", required=False),
@@ -80,9 +69,10 @@ COMMON_CMD = [
     click.option(
         "-d",
         "--duration",
-        cls=PythonLiteralOption,
         help="Duration or list of duration",
-        default="[15,]",
+        type=int,
+        default=[15],
+        multiple=True,
     ),
     click.option("--out", default="", help="Download directory"),
 ]
@@ -112,7 +102,7 @@ def get_group_ids():
         try:
             id = item["relationships"]["activityGroup"]["data"]["id"]
         except KeyError:
-            pass
+            continue
         pack_ids.append(int(id))
     return sorted(pack_ids)
 
@@ -138,7 +128,9 @@ def request_url(
             errors = response_js["errors"]
             logging.error(errors)
             if response.status_code == 401:
-                console.print("\n[red]Unautorized : Unable to login to headspace account[/red]")
+                console.print(
+                    "\n[red]Unautorized : Unable to login to headspace account[/red]"
+                )
                 console.print("Run [green]headspace login[/green] first.")
             else:
                 console.print(errors)
@@ -178,9 +170,7 @@ def get_pack_attributes(
     if all_:
         exists = os.path.exists(os.path.join(out, _pack_name))
         if exists:
-            console.print(
-                f"{_pack_name} already exists [red]skipping... [/red]"
-            )
+            console.print(f"{_pack_name} already exists [red]skipping... [/red]")
             return
     # Logging
     logging.info(f"Downloading pack, name: {_pack_name}")
@@ -324,9 +314,7 @@ def download(
         filepath = os.path.join(out, filename)
 
     if os.path.exists(filepath):
-        console.print(
-            f"'{filename}' already exists [red]skipping...[/red]"
-        )
+        console.print(f"'{filename}' already exists [red]skipping...[/red]")
         return
     with open(filepath, "wb") as file:
         for chunk in track(
@@ -342,23 +330,24 @@ def find_id(pattern: str, url: str):
     try:
         id = int(re.findall(pattern, url)[-1])
     except ValueError:
-        raise click.UsageError(
-            "Cannot find the ID. Use --id option to provide the ID."
-        )
+        raise click.UsageError("Cannot find the ID. Use --id option to provide the ID.")
     except IndexError:
-        raise click.UsageError(
-            "Cannot find the ID. Use --id option to provide the ID."
-        )
+        raise click.UsageError("Cannot find the ID. Use --id option to provide the ID.")
     return id
 
 
 @click.group()
 @click.version_option()
-def cli():
+@click.option(
+    "--verbose", "-v", is_flag=True, help="Enable verbose mode.", default=False
+)
+def cli(verbose):
     """
     Download headspace packs or individual meditation and techniques.
     """
-    pass
+    if verbose:
+        console.print("[bold]Verbose mode enabled[/bold]")
+        log.basicConfig(level=log.DEBUG)
 
 
 @cli.command("pack")
@@ -402,17 +391,7 @@ def pack(
     Download headspace packs with techniques videos.
     """
 
-    if not type(duration) == list or type(duration) == tuple:
-        raise click.BadParameter(duration)
-
     duration = list(set(duration))
-
-    for idx, d in enumerate(duration):
-        try:
-            d = int(d)
-            duration[idx] = d
-        except:
-            raise click.BadParameter(duration)
 
     if not all_:
         if url == "" and id <= 0:
@@ -548,7 +527,7 @@ def everyday(userid: str, _from: str, to: str, duration: Union[list, tuple], out
 def login():
     email, password = prompt()
     bearer_token = authenticate(email, password)
-    if bearer_token == False:
+    if not bearer_token:
         raise click.Abort()
     write_bearer(bearer_token)
     console.print("[green]:heavy_check_mark:[/green] Logged in successfully!")
