@@ -495,7 +495,7 @@ def pack(
 @click.argument("url", type=str)
 def download_single(url: str, out: str, duration: Union[list, tuple]):
     """
-    Download single headspace meditation.
+    Download single headspace session.
     """
 
     pattern = r"my.headspace.com/player/([0-9]+)"
