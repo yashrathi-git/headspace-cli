@@ -1,6 +1,5 @@
 ## Setup Instructions
-For version 1.x.x <br>
-For latest version documentation visit [here](https://github.com/yashrathi-git/pyHeadspace/blob/main/README.md)
+
 
 <br>
 
