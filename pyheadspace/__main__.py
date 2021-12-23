@@ -370,6 +370,25 @@ def cli(verbose):
         log.basicConfig(level=log.DEBUG)
 
 
+@cli.command("help")
+@click.argument("command", required=False)
+@click.pass_context
+def help_(ctx, command):
+    """
+    Display help information
+    """
+    if not command:
+        click.echo(ctx.parent.get_help())
+        return
+
+    cmd = cli.get_command(ctx, command)
+
+    if not cmd:
+        raise click.ClickException("No such command: {}".format(command))
+
+    click.echo(cmd.get_help(ctx))
+
+
 def get_legacy_id(new_id):
     log.info("Getting entity ID")
     url = "https://api.prod.headspace.com/content-aggregation/v2/content/view-models/content-info/skeleton"
