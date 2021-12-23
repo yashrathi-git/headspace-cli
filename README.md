@@ -1,18 +1,18 @@
 # pyHeadspace
 Command line script to download headspace packs, singles or everyday meditation.
 <p align="center">
-<img src = "https://raw.githubusercontent.com/yashrathi-git/pyHeadspace/main/images/demo-f.gif" alt = "demo">
+
+<img src = "https://user-images.githubusercontent.com/57002207/147270294-de0ec3f9-7bfa-4c63-84de-b4239fd4995e.gif" alt = "demo">
 </p>
 
 ## 👶 Dependencies
-* [Python 3.6 or higher](https://www.python.org/downloads/)
+* [Python 3.7 or higher](https://www.python.org/downloads/)
 
 ## 🛠️ Installation
 ```sh
 pip install --upgrade pyheadspace
 ```
 * If installing using `pip install --user`, you must add the user-level bin directory to your PATH environment variable in order to use pyheadspace. If you are using a Unix derivative (FreeBSD, GNU / Linux, OS X), you can achieve this by using `export PATH="$HOME/.local/bin:$PATH"` command.
-* Make sure you are using version 2.0.2 or above, otherwise many features might not work. After install check the version by running `headspace --version`
 
 ### This tool is only meant for personal use. Do not use this for piracy!
 ## ⚙️ Setup
@@ -32,7 +32,7 @@ headspace login
 headspace pack --all --duration 15
 
 # Download all packs with session duration of 10 & 20 minutes
-headspace pack --all --duration "[10,20]"
+headspace pack --all --duration 10 --duration 15
 ```
 **Exclude specific packs from downloading:**
 <br />
@@ -53,19 +53,18 @@ This would download all packs except the ones in `links.txt` file
 
 ## Downloading specific Headspace pack
 ```sh
-headspace pack <URL> [Options]
+headspace pack <PACK_URL> [Options]
 ```
-It expects URL in format `https://my.headspace.com/packs/<int>`
 
 <br />
 
 **BASIC USAGE**
 ```sh
 # Download with all session of duration 15 minutes
-headspace pack https://my.headspace.com/packs/33 --duration 15 
+headspace pack https://my.headspace.com/modes/meditate/content/151 --duration 15 
 
 # Download sessions of multiple duration
-headspace pack https://my.headspace.com/packs/33 --duration "[20, 15, 10]"    
+headspace pack https://my.headspace.com/modes/meditate/content/151 -d 20 -d 15   
 
 ```
 **Options:**
@@ -86,18 +85,15 @@ headspace pack https://my.headspace.com/packs/33 --duration "[20, 15, 10]"
 
 ## Download single session
 ```sh
-headspace download <URL> [options]
+headspace download <SESSION_URL> [options]
 ```
 
-It expects URL in format `https://my.headspace.com/play/<int>`
 
 <br />
 
 **BASIC USAGE**
 ```sh
-$ headspace download https://my.headspace.com/play/520 --duration 15
-# Download sessions of multiple durations
-$ headspace download https://my.headspace.com/play/520 --duration "[15,20]"
+$ headspace download https://my.headspace.com/player/204?authorId=1&contentId=151&contentType=COURSE&mode=meditate&trackingName=Course&startIndex=1 --duration 15
 ```
 **Options:**
 ```sh
@@ -112,23 +108,19 @@ $ headspace download https://my.headspace.com/play/520 --duration "[15,20]"
 ```sh
 headspace everyday [OPTIONS]
 ```
-**How to get your user id?** <br>
-1. First goto https://www.headspace.com/login and login with your credentials
-2. Go to https://webviews.headspace.com/data and get the `User ID`
-<br>
+
 
 **BASIC USAGE**
 ```sh
 # Downloads today's meditation
-headspace everyday --userid <YOUR USER ID>
+headspace everyday
 
 # Download everyday meditation of specific time period.
 # DATE FORMAT: yyyy-mm-dd
-headspace everyday --from 2021-03-01 --to 2021-03-20 --userid <YOUR USER ID>
+headspace everyday --from 2021-03-01 --to 2021-03-20
 ```
 **Options**
 ```
---userid TEXT
 --from TEXT          Start download from specific date. DATE-FORMAT=>yyyy-
                     mm-dd
 --to TEXT            Download till a specific date. DATE-FORMAT=>yyyy-mm-dd
