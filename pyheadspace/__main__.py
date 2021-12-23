@@ -172,6 +172,8 @@ def get_pack_attributes(
     response = request_url(PACK_URL, id=pack_id)
     attributes: dict = response["data"]["attributes"]
     _pack_name: str = attributes["name"]
+    # Because it's only used for filenames, and | is mostly not allowed in filenames
+    _pack_name = _pack_name.replace("|", "-")
 
     if all_:
         exists = os.path.exists(os.path.join(out, _pack_name))
