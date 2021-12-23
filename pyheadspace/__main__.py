@@ -4,11 +4,13 @@ import re
 from datetime import date, datetime, timedelta
 from typing import List, Optional, Union
 
+import jwt
 from appdirs import user_data_dir
 import click
 import requests
 from rich.console import Console
 from rich.progress import track
+from urllib.parse import urlparse, parse_qs
 from rich.traceback import install
 
 from pyheadspace.auth import authenticate, prompt
@@ -37,6 +39,9 @@ if not os.path.exists(BEARER):
 with open(BEARER, "r") as file:
     BEARER_ID = file.read().strip()
 
+USER_ID = jwt.decode(BEARER_ID.split(" ")[-1], options={"verify_signature": False})[
+    "https://api.prod.headspace.com/hsId"
+]
 
 headers = {
     "authority": "api.prod.headspace.com",
@@ -108,8 +113,10 @@ def get_group_ids():
 
 
 def request_url(
-    url: str, *, id: Union[str, int] = None, mute: bool = False, params: dict = {}
+    url: str, *, id: Union[str, int] = None, mute: bool = False, params=None
 ):
+    if params is None:
+        params = {}
     url = url.format(id)
     if not mute:
         logging.info("Sending GET request to {}".format(url))
@@ -117,11 +124,10 @@ def request_url(
     response = session.get(url, params=params)
     try:
         response_js: dict = response.json()
-    except:
-        logging.critical(f"Invalid JSON data with status code {response.status_code}")
-        console.print(repr(response))
-        console.print("Unexpected response. Try again after sometime. DATA=")
-        console.print(response.text)
+    except Exception as e:
+        logging.critical(f"status code {response.status_code}")
+        logging.critical(f"error: {e}")
+        console.print(f"status code {response.status_code}")
         raise click.Abort()
     if not response.ok:
         if "errors" in response_js.keys():
@@ -241,20 +247,32 @@ def get_signed_url(response: dict, duration: List[int]) -> dict:
 
 
 def download_pack_session(
-    id: Union[int, str], duration: List[int], pack_name: Optional[str], out: str
+    id: Union[int, str],
+    duration: List[int],
+    pack_name: Optional[str],
+    out: str,
+    filename_suffix=None,
 ):
     response = request_url(AUDIO_URL, id=id)
 
     signed_url = get_signed_url(response, duration=duration)
     for name, direct_url in signed_url.items():
+        if filename_suffix:
+            name += filename_suffix
         download(direct_url, name, filename=name, pack_name=pack_name, out=out)
 
 
 def download_pack_techniques(
-    technique_id: Union[int, str], *, pack_name: Optional[str] = None, out: str
+    technique_id: Union[int, str],
+    *,
+    pack_name: Optional[str] = None,
+    out: str,
+    filename_suffix=None,
 ):
     response = request_url(TECHNIQUE_URL, id=technique_id)
     name = response["data"]["attributes"]["name"]
+    if filename_suffix:
+        name += filename_suffix
     for item in response["included"]:
         if not item["type"] == "mediaItems":
             continue
@@ -350,6 +368,13 @@ def cli(verbose):
         log.basicConfig(level=log.DEBUG)
 
 
+def get_legacy_id(new_id):
+    log.info("Getting entity ID")
+    url = "https://api.prod.headspace.com/content-aggregation/v2/content/view-models/content-info/skeleton"
+    response = request_url(url, params={"contentId": new_id, "userId": USER_ID})
+    return response["entityId"]
+
+
 @cli.command("pack")
 @click.option(
     "--no_meditation",
@@ -397,9 +422,11 @@ def pack(
         if url == "" and id <= 0:
             raise click.BadParameter("Please provide ID or URL.")
         if url:
-            pattern = r"my.headspace.com/packs/([0-9]+)"
+            pattern = r"my.headspace.com/modes/meditate/content/([0-9]+)"
             id = find_id(pattern, url)
-
+            id = get_legacy_id(id)
+        else:
+            id = get_legacy_id(id)
         get_pack_attributes(
             pack_id=id,
             duration=duration,
@@ -410,7 +437,7 @@ def pack(
     else:
         excluded = []
         if exclude:
-            pattern = r"my.headspace.com/packs/([0-9]+)"
+            pattern = r"my.headspace.com/modes/meditate/content/([0-9]+)"
             try:
                 with open(exclude, "r") as file:
                     links = file.readlines()
@@ -419,7 +446,7 @@ def pack(
             for link in links:
                 exclude_id = re.findall(pattern, link)
                 if exclude_id:
-                    excluded.append(int(exclude_id[0]))
+                    excluded.append(get_legacy_id(int(exclude_id[0])))
                 else:
                     console.print(f"[yellow]Unable to parse: {link}[/yellow]")
 
@@ -444,19 +471,41 @@ def pack(
 
 @cli.command("download")
 @shared_cmd(COMMON_CMD)
-@shared_cmd(URL_GROUP_CMD)
-def download_single(url: str, out: str, id: int, duration: Union[list, tuple]):
+@click.argument("url", type=str)
+def download_single(url: str, out: str, duration: Union[list, tuple]):
     """
     Download single headspace meditation.
     """
-    if url == "" and id <= 0:
-        raise click.BadParameter("Please provide ID or URL.")
-    pattern = r"my.headspace.com/play/([0-9]+)"
-    if not id > 0:
-        final_id = find_id(pattern, url)
-    else:
-        final_id = id
-    download_pack_session(final_id, duration, None, out)
+
+    pattern = r"my.headspace.com/player/([0-9]+)"
+    try:
+        pack_id = find_id(pattern, url)
+    except click.UsageError:
+        raise click.UsageError("Unable to parse URL.")
+
+    try:
+        index = int(parse_qs(urlparse(url).query)["startIndex"][0])
+    except KeyError:
+        index = 0
+    except ValueError:
+        raise click.Abort("Unable to parse startIndex.")
+
+    response = request_url(PACK_URL, id=pack_id)
+    attributes: dict = response["data"]["attributes"]
+    pack_name: str = attributes["name"]
+
+    data = response["included"]
+    data = data[index]
+    if data["type"] == "orderedActivities":
+        id = data["relationships"]["activity"]["data"]["id"]
+        download_pack_session(
+            id, duration, None, out=out, filename_suffix=" - {}".format(pack_name)
+        )
+    elif data["type"] == "orderedTechniques":
+        id = data["relationships"]["technique"]["data"]["id"]
+        download_pack_techniques(
+            id, pack_name=None, out=out, filename_suffix=" - {}".format(pack_name)
+        )
 
 
 @cli.command("file")
@@ -486,7 +535,6 @@ def write_bearer(bearer_id):
 
 
 @cli.command("everyday")
-@click.option("--userid", type=str, prompt="User ID")
 @click.option(
     "--from",
     "_from",
@@ -501,10 +549,11 @@ def write_bearer(bearer_id):
     help="Download till a specific date. DATE-FORMAT=>yyyy-mm-dd",
 )
 @shared_cmd(COMMON_CMD)
-def everyday(userid: str, _from: str, to: str, duration: Union[list, tuple], out: str):
+def everyday(_from: str, to: str, duration: Union[list, tuple], out: str):
     """
     Download everyday headspace.
     """
+    userid = USER_ID
     date_format = "%Y-%m-%d"
     _from = datetime.strptime(_from, date_format).date()
     to = datetime.strptime(to, date_format).date()
