@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "pyheadspace"
+version = "2.0.2"
+description = "Command line script to download packs and singles from Headspace."
+authors = ["Yash Rathi <yashrathicricket@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.7,<4.0.0"
+click = "^8.0.3"
+rich = "^10.16.1"
+requests = "^2.26.0"
+appdirs = "^1.4.4"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+headspace = 'pyheadspace.__main__:cli'
