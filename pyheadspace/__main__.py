@@ -469,7 +469,7 @@ def pack(
             for link in links:
                 exclude_id = re.findall(pattern, link)
                 if exclude_id:
-                    excluded.append(get_legacy_id(int(exclude_id[0])))
+                    excluded.append(int(get_legacy_id(int(exclude_id[0]))))
                 else:
                     console.print(f"[yellow]Unable to parse: {link}[/yellow]")
 
