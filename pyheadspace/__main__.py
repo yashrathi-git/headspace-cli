@@ -20,7 +20,7 @@ install()
 
 BASEDIR = user_data_dir("pyheadspace")
 if not os.path.exists(BASEDIR):
-    os.mkdir(BASEDIR)
+    os.makedirs(BASEDIR)
 BEARER = os.path.abspath(os.path.join(BASEDIR, "bearer_id.txt"))
 
 AUDIO_URL = "https://api.prod.headspace.com/content/activities/{}"
@@ -195,11 +195,6 @@ def get_pack_attributes(
     console.print(f'[green]Name: [/green] {attributes["name"]}')
     console.print(f'[green]Description: [/green] {attributes["description"]}')
 
-    if all_ is True:
-        console.print(f"URL: https://my.headspace.com/packs/{pack_id}")
-        console.print(
-            "Use [green]--exclude[/green] option to exclude downloading this pack."
-        )
     data = response["included"]
     for item in data:
         if item["type"] == "orderedActivities":
