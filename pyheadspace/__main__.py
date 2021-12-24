@@ -39,9 +39,16 @@ if not os.path.exists(BEARER):
 with open(BEARER, "r") as file:
     BEARER_ID = file.read().strip()
 
-USER_ID = jwt.decode(BEARER_ID.split(" ")[-1], options={"verify_signature": False})[
-    "https://api.prod.headspace.com/hsId"
-]
+if BEARER_ID:
+    try:
+        USER_ID = jwt.decode(
+            BEARER_ID.split(" ")[-1], options={"verify_signature": False}
+        )["https://api.prod.headspace.com/hsId"]
+    except Exception as e:
+        log.error(e)
+        USER_ID = ""
+else:
+    USER_ID = ""
 
 headers = {
     "authority": "api.prod.headspace.com",
