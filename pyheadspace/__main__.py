@@ -338,14 +338,37 @@ def download(
     if os.path.exists(filepath):
         console.print(f"'{filename}' already exists [red]skipping...[/red]")
         return
-    with open(filepath, "wb") as file:
-        for chunk in track(
-            media.iter_content(chunk_size=chunk_size),
-            description=f"[red]Downloading...[/red]",
-            total=total_length // chunk_size,
-        ):
-            file.write(chunk)
-            file.flush()
+
+    failed_tries = 0
+    max_tries = 5
+    while(failed_tries <= max_tries):
+        downloaded_length = 0
+        with open(filepath, "wb") as file:
+            for chunk in track(
+                media.iter_content(chunk_size=chunk_size),
+                description=f"[red]Downloading...[/red]",
+                total=total_length // chunk_size,
+            ):
+                downloaded_length += len(chunk)
+                file.write(chunk)
+                file.flush()
+        
+        if downloaded_length != total_length:
+            failed_tries += 1
+            console.print(
+                f"[red]Download failed. Retrying {failed_tries} out of {max_tries}...[/red]",
+            )
+            media.close()
+            media = requests.get(direct_url, stream=True)
+        else:
+            break
+    
+    if failed_tries > 5:
+        console.print(
+            f"[red]Failed to download {filename}[/red]\n"
+        )
+        logging.error(f"Failed to download {filename}")
+        os.remove(filepath)
 
 
 def find_id(pattern: str, url: str):
