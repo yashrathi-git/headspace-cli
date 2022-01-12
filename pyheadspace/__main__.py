@@ -356,14 +356,14 @@ def download(
         if downloaded_length != total_length:
             failed_tries += 1
             console.print(
-                f"[red]Download failed. Retrying {failed_tries} out of {max_tries}...[/red]",
+                f"[red]Download failed. Retrying {failed_tries} out of {max_tries}...[/red]"
             )
             media.close()
             media = requests.get(direct_url, stream=True)
         else:
             break
 
-    if failed_tries > 5:
+    if failed_tries > max_tries:
         console.print(f"[red]Failed to download {filename}[/red]\n")
         logging.error(f"Failed to download {filename}")
         os.remove(filepath)
@@ -461,12 +461,12 @@ def pack(
     """
 
     duration = list(set(duration))
+    pattern = r"my.headspace.com/modes/(?:meditate|focus)/content/([0-9]+)"
 
     if not all_:
         if url == "" and id <= 0:
             raise click.BadParameter("Please provide ID or URL.")
         if url:
-            pattern = r"my.headspace.com/modes/meditate/content/([0-9]+)"
             id = find_id(pattern, url)
             id = get_legacy_id(id)
         else:
@@ -481,7 +481,6 @@ def pack(
     else:
         excluded = []
         if exclude:
-            pattern = r"my.headspace.com/modes/meditate/content/([0-9]+)"
             try:
                 with open(exclude, "r") as file:
                     links = file.readlines()
