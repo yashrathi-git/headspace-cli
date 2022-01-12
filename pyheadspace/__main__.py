@@ -341,7 +341,7 @@ def download(
 
     failed_tries = 0
     max_tries = 5
-    while(failed_tries <= max_tries):
+    while failed_tries <= max_tries:
         downloaded_length = 0
         with open(filepath, "wb") as file:
             for chunk in track(
@@ -352,7 +352,7 @@ def download(
                 downloaded_length += len(chunk)
                 file.write(chunk)
                 file.flush()
-        
+
         if downloaded_length != total_length:
             failed_tries += 1
             console.print(
@@ -362,11 +362,9 @@ def download(
             media = requests.get(direct_url, stream=True)
         else:
             break
-    
+
     if failed_tries > 5:
-        console.print(
-            f"[red]Failed to download {filename}[/red]\n"
-        )
+        console.print(f"[red]Failed to download {filename}[/red]\n")
         logging.error(f"Failed to download {filename}")
         os.remove(filepath)
 
