@@ -1,7 +1,9 @@
 # pyHeadspace
 
-TODO: If there's only one duration available, download that duration without asking again.
+TODO: 
+1. If there's only one duration available, download that duration without asking again.
  (Or using a longest command would work as well.)
+2. Replace `requests` with `httpx`.
 
 Command line script to download headspace packs, singles or everyday meditation.
 <p align="center">
