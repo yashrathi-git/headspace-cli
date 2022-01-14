@@ -1,4 +1,8 @@
 # pyHeadspace
+
+TODO: If there's only one duration available, download that duration without asking again.
+ (Or using a longest command would work as well.)
+
 Command line script to download headspace packs, singles or everyday meditation.
 <p align="center">
 
