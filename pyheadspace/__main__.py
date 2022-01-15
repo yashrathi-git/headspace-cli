@@ -13,6 +13,9 @@ from rich.progress import track
 from urllib.parse import urlparse, parse_qs
 from rich.traceback import install
 
+import httpx
+import rich
+
 from pyheadspace.auth import authenticate, prompt
 
 # For better tracebacks
@@ -210,43 +213,44 @@ def get_pack_attributes(
 def get_signed_url(response: dict, duration: List[int]) -> dict:
     data = response["included"]
     signed_links = {}
+    all_links = {}
     av_duration = []
     for item in data:
         try:
             name = response["data"]["attributes"]["name"]
         except KeyError:
             name = response["data"]["attributes"]["titleText"]
+
         if item["type"] != "mediaItems":
             continue
+
         try:
             duration_in_min = round_off(int(item["attributes"]["durationInMs"]))
         except KeyError:
             continue
+
         av_duration.append(duration_in_min)
-        if duration_in_min not in duration:
-            continue
 
         sign_id = item["id"]
         # Getting signed URL
         direct_url = request_url(SIGN_URL, id=sign_id)["url"]
+
         if len(duration) > 1:
             name += f"({duration_in_min} minutes)"
 
-        signed_links[name] = direct_url
+        all_links[duration_in_min] = (direct_url, name)
+
+        if duration_in_min in duration:
+            signed_links[name] = direct_url
+
     if len(signed_links) == 0:
-        msg = (
-            f"Cannot download {name}. This could be"
-            " because this session might not be available in "
-            f"{', '.join(str(d) for d in duration)} min duration."
-        )
-        console.print(f"[yellow]{msg}[yellow]")
+        max_duration = max(av_duration)
+        direct_url, name = all_links[max_duration]
+        signed_links[name] = direct_url
+
         console.print(
-            "This session is available with duration of "
-            f"{'/'.join(str(d) for d in av_duration)} minutes. "
-            "Use [green]--duration[/green] option to modify required duration."
-            "\n[red]([bold]Ctrl+C[/bold] to terminate)[/red]"
+            f"This session is being downloaded with duration of {max_duration} minutes."
         )
-        logging.warning(msg)
     return signed_links
 
 
@@ -300,68 +304,85 @@ def download(
 ):
     console.print(f"[green]Downloading {name}[/green]")
     logging.info(f"Sending GET request to {direct_url}")
-    media = requests.get(direct_url, stream=True)
-
-    if not media.ok:
-        media_json = media.json()
-        console.print(media_json)
-        logging.error(media_json)
-        raise click.UsageError(f"HTTP error: status-code = {media.status_code}")
-
-    media_type = media.headers.get("content-type").split("/")[-1]
-    filename += f".{media_type}"
-    total_length = int(media.headers.get("content-length"))
-    chunk_size = 1024
-
-    if not os.path.exists(out) and os.path.isdir(out):
-        raise click.BadOptionUsage("--out", f"'{out}' path not valid")
-
-    if pack_name:
-        dir_path = os.path.join(out, pack_name)
-        pattern = r"Session \d+ of (Level \d+)"
-        level = re.findall(pattern, filename)
-        if level:
-            dir_path = os.path.join(dir_path, level[0])
-
-        if is_technique:
-            dir_path = os.path.join(dir_path, "Techniques")
-        try:
-            os.makedirs(dir_path)
-        except FileExistsError:
-            pass
-        filepath = os.path.join(dir_path, filename)
-    else:
-        if not os.path.exists(out) and out != "":
-            raise click.UsageError(message=f"'{out}' path does not exists.")
-        filepath = os.path.join(out, filename)
-
-    if os.path.exists(filepath):
-        console.print(f"'{filename}' already exists [red]skipping...[/red]")
-        return
 
     failed_tries = 0
-    max_tries = 5
-    while failed_tries <= max_tries:
-        downloaded_length = 0
-        with open(filepath, "wb") as file:
-            for chunk in track(
-                media.iter_content(chunk_size=chunk_size),
-                description=f"[red]Downloading...[/red]",
-                total=total_length // chunk_size,
-            ):
-                downloaded_length += len(chunk)
-                file.write(chunk)
-                file.flush()
+    max_tries = float("inf")
 
-        if downloaded_length != total_length:
+    console.print(f"[green]URL: {direct_url}[/green]")
+    while failed_tries < max_tries:
+        try:
+            with httpx.stream("GET", direct_url) as media:
+
+                media_type = media.headers.get("content-type").split("/")[-1]
+                filename += f".{media_type}"
+                total_length = int(media.headers.get("content-length"))
+
+                if not os.path.exists(out) and os.path.isdir(out):
+                    raise click.BadOptionUsage("--out", f"'{out}' path not valid")
+
+                if pack_name:
+                    dir_path = os.path.join(out, pack_name)
+                    pattern = r"Session \d+ of (Level \d+)"
+                    level = re.findall(pattern, filename)
+                    if level:
+                        dir_path = os.path.join(dir_path, level[0])
+
+                    if is_technique:
+                        dir_path = os.path.join(dir_path, "Techniques")
+                    try:
+                        os.makedirs(dir_path)
+                    except FileExistsError:
+                        pass
+                    filepath = os.path.join(dir_path, filename)
+                else:
+                    if not os.path.exists(out) and out != "":
+                        raise click.UsageError(message=f"'{out}' path does not exists.")
+                    filepath = os.path.join(out, filename)
+
+                if os.path.exists(filepath):
+                    console.print(f"'{filename}' already exists [red]skipping...[/red]")
+                    return
+                
+                with open(filepath, "wb") as f:
+
+                    with rich.progress.Progress(
+                        "[progress.percentage]{task.percentage:>3.0f}%",
+                        rich.progress.BarColumn(bar_width=None),
+                        rich.progress.DownloadColumn(),
+                        rich.progress.TransferSpeedColumn(),
+                    ) as progress:
+                        download_task = progress.add_task("Downloading", total=total_length)
+                        for chunk in media.iter_bytes():
+                            f.write(chunk)
+                            progress.update(download_task, completed=media.num_bytes_downloaded)
+
+        except httpx.RemoteProtocolError:
             failed_tries += 1
             console.print(
                 f"[red]Download failed. Retrying {failed_tries} out of {max_tries}...[/red]"
             )
-            media.close()
-            media = requests.get(direct_url, stream=True)
-        else:
-            break
+
+    # while failed_tries <= max_tries:
+    #     downloaded_length = 0
+    #     with open(filepath, "wb") as file:
+    #         for chunk in track(
+    #             media.iter_content(chunk_size=chunk_size),
+    #             description=f"[red]Downloading...[/red]",
+    #             total=total_length // chunk_size,
+    #         ):
+    #             downloaded_length += len(chunk)
+    #             file.write(chunk)
+    #             file.flush()
+
+    #     if downloaded_length != total_length:
+    #         failed_tries += 1
+    #         console.print(
+    #             f"[red]Download failed. Retrying {failed_tries} out of {max_tries}...[/red]"
+    #         )
+    #         media.close()
+    #         media = requests.get(direct_url, stream=True)
+    #     else:
+    #         break
 
     if failed_tries > max_tries:
         console.print(f"[red]Failed to download {filename}[/red]\n")
