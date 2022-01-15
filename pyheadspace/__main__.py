@@ -388,9 +388,12 @@ def cli(verbose):
     """
     Download headspace packs or individual meditation and techniques.
     """
+    log.basicConfig(level=log.DEBUG if verbose else log.CRITICAL)
+    # We don't want log messages from requests and urllib3 unless they are atleast warning
+    log.getLogger("requests").setLevel(log.WARNING)
+    log.getLogger("urllib3").setLevel(log.WARNING)
     if verbose:
         console.print("[bold]Verbose mode enabled[/bold]")
-        log.basicConfig(level=log.DEBUG)
 
 
 @cli.command("help")
