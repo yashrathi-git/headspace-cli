@@ -1,4 +1,6 @@
 # pyHeadspace
+[![PyPI version](https://badge.fury.io/py/pyheadspace.svg)](https://badge.fury.io/py/pyheadspace)
+
 Command line script to download headspace packs, singles or everyday meditation.
 <p align="center">
 
