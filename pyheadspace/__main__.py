@@ -1,4 +1,4 @@
-import logging as log
+import logging
 import os
 import re
 from datetime import date, datetime, timedelta
@@ -45,7 +45,6 @@ if BEARER_ID:
             BEARER_ID.split(" ")[-1], options={"verify_signature": False}
         )["https://api.prod.headspace.com/hsId"]
     except Exception as e:
-        log.error(e)
         USER_ID = ""
 else:
     USER_ID = ""
@@ -65,7 +64,7 @@ headers = {
 }
 
 console = Console()
-logging = log.getLogger("pyHeadspace")
+logger = logging.getLogger("pyHeadspace")
 
 
 session = requests.Session()
@@ -126,20 +125,20 @@ def request_url(
         params = {}
     url = url.format(id)
     if not mute:
-        logging.info("Sending GET request to {}".format(url))
+        logger.info("Sending GET request to {}".format(url))
 
     response = session.get(url, params=params)
     try:
         response_js: dict = response.json()
     except Exception as e:
-        logging.critical(f"status code {response.status_code}")
-        logging.critical(f"error: {e}")
+        logger.critical(f"status code {response.status_code}")
+        logger.critical(f"error: {e}")
         console.print(f"status code {response.status_code}")
         raise click.Abort()
     if not response.ok:
         if "errors" in response_js.keys():
             errors = response_js["errors"]
-            logging.error(errors)
+            logger.error(errors)
             if response.status_code == 401:
                 console.print(
                     "\n[red]Unautorized : Unable to login to headspace account[/red]"
@@ -149,7 +148,7 @@ def request_url(
                 console.print(errors)
         else:
             console.print(response_js)
-            logging.error(response_js)
+            logger.error(response_js)
         raise click.UsageError(f"HTTP error: status-code = {response.status_code}")
     return response_js
 
@@ -188,7 +187,7 @@ def get_pack_attributes(
             console.print(f"{_pack_name} already exists [red]skipping... [/red]")
             return
     # Logging
-    logging.info(f"Downloading pack, name: {_pack_name}")
+    logger.info(f"Downloading pack, name: {_pack_name}")
 
     # Printing
     console.print("Pack metadata: ")
@@ -246,7 +245,7 @@ def get_signed_url(response: dict, duration: List[int]) -> dict:
             "Use [green]--duration[/green] option to modify required duration."
             "\n[red]([bold]Ctrl+C[/bold] to terminate)[/red]"
         )
-        logging.warning(msg)
+        logger.warning(msg)
     return signed_links
 
 
@@ -299,13 +298,13 @@ def download(
     is_technique: bool = False,
 ):
     console.print(f"[green]Downloading {name}[/green]")
-    logging.info(f"Sending GET request to {direct_url}")
+    logger.info(f"Sending GET request to {direct_url}")
     media = requests.get(direct_url, stream=True)
 
     if not media.ok:
         media_json = media.json()
         console.print(media_json)
-        logging.error(media_json)
+        logger.error(media_json)
         raise click.UsageError(f"HTTP error: status-code = {media.status_code}")
 
     media_type = media.headers.get("content-type").split("/")[-1]
@@ -365,7 +364,7 @@ def download(
 
     if failed_tries > max_tries:
         console.print(f"[red]Failed to download {filename}[/red]\n")
-        logging.error(f"Failed to download {filename}")
+        logger.error(f"Failed to download {filename}")
         os.remove(filepath)
 
 
@@ -388,10 +387,10 @@ def cli(verbose):
     """
     Download headspace packs or individual meditation and techniques.
     """
-    log.basicConfig(level=log.DEBUG if verbose else log.CRITICAL)
+    logging.basicConfig(level=logging.DEBUG if verbose else logging.CRITICAL)
     # We don't want log messages from requests and urllib3 unless they are atleast warning
-    log.getLogger("requests").setLevel(log.WARNING)
-    log.getLogger("urllib3").setLevel(log.WARNING)
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
     if verbose:
         console.print("[bold]Verbose mode enabled[/bold]")
 
@@ -416,7 +415,7 @@ def help_(ctx, command):
 
 
 def get_legacy_id(new_id):
-    log.info("Getting entity ID")
+    logger.info("Getting entity ID")
     url = "https://api.prod.headspace.com/content-aggregation/v2/content/view-models/content-info/skeleton"
     response = request_url(url, params={"contentId": new_id, "userId": USER_ID})
     return response["entityId"]
@@ -497,7 +496,7 @@ def pack(
                     console.print(f"[yellow]Unable to parse: {link}[/yellow]")
 
         console.print("[red]Downloading all packs[/red]")
-        logging.info("Downloading all packs")
+        logger.info("Downloading all packs")
 
         group_ids = get_group_ids()
 
@@ -512,7 +511,7 @@ def pack(
                     all_=True,
                 )
             else:
-                logging.info(f"Skipping ID: {pack_id} as it is excluded")
+                logger.info(f"Skipping ID: {pack_id} as it is excluded")
 
 
 @cli.command("download")
