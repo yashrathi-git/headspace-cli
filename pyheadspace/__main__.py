@@ -363,7 +363,7 @@ def download(
         else:
             break
 
-    if failed_tries > 5:
+    if failed_tries > max_tries:
         console.print(f"[red]Failed to download {filename}[/red]\n")
         logging.error(f"Failed to download {filename}")
         os.remove(filepath)
