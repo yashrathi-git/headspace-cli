@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyheadspace"
-version = "3.0.3"
+version = "3.0.4"
 description = "Command line script to download packs and singles from Headspace."
 authors = ["Yash Rathi <yashrathicricket@gmail.com>"]
 readme = "README.md"
