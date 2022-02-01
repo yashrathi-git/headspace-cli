@@ -28,3 +28,6 @@ jobs:
       - name: Check code style with black
         run: |
           poetry run black --check .
+      - name: Run tests
+        run: |
+          poetry run pytest
