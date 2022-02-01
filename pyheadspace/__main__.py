@@ -153,16 +153,25 @@ def request_url(
     return response_js
 
 
-def round_off(time: int):
+def round_off(time: Union[int, float]):
+    orig_duration = time / 60000
+
     time = time // 60000
     unit_place = time % 10
 
-    if unit_place > 0 and unit_place < 5:
+    if 0 < unit_place < 5:
         time -= unit_place
     elif unit_place > 5:
         time -= unit_place - 5
     if time == 0:
-        time = 1
+        if (orig_duration >= 2) and (orig_duration < 3):
+            time = 2
+        elif (orig_duration >= 3) and (orig_duration < 4):
+            time = 3
+        elif (orig_duration >= 4) and (orig_duration <= 5):
+            time = 5
+        else:
+            time = 1
     return time
 
 
