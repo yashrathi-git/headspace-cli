@@ -54,8 +54,8 @@ To exclude specific packs from downloading use `--exclude` option.
 It expects location of text file for links of packs to exclude downloading. Every link should be on separate line.<br><br>
 **links.txt**:
 ```
-https://my.headspace.com/packs/5
-https://my.headspace.com/packs/6
+https://my.headspace.com/modes/meditate/content/154
+https://my.headspace.com/modes/meditate/content/150
 ```
 **command**
 ```sh
