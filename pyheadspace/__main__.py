@@ -31,6 +31,7 @@ EVERYDAY_URL = (
     "https://api.prod.headspace.com/content/view-models/everyday-headspace-banner"
 )
 GROUP_COLLECTION = "https://api.prod.headspace.com/content/group-collections"
+DESIRED_LANGUAGE = os.getenv('DESIRED_LANGUAGE', 'en-US')
 
 if not os.path.exists(BEARER):
     with open(BEARER, "w") as file:
@@ -54,7 +55,7 @@ headers = {
     "accept": "application/vnd.api+json",
     "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.72 Safari/537.36",
     "authorization": BEARER_ID,
-    "hs-languagepreference": "en-US",
+    "hs-languagepreference": DESIRED_LANGUAGE,
     "sec-gpc": "1",
     "origin": "https://my.headspace.com",
     "sec-fetch-site": "same-site",
