@@ -31,7 +31,7 @@ EVERYDAY_URL = (
     "https://api.prod.headspace.com/content/view-models/everyday-headspace-banner"
 )
 GROUP_COLLECTION = "https://api.prod.headspace.com/content/group-collections"
-DESIRED_LANGUAGE = os.getenv('HEADSPACE_LANG', 'en-US')
+DESIRED_LANGUAGE = os.getenv("HEADSPACE_LANG", "en-US")
 
 if not os.path.exists(BEARER):
     with open(BEARER, "w") as file:
