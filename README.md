@@ -7,6 +7,15 @@ Command line script to download headspace packs, singles or everyday meditation.
 <img src = "https://user-images.githubusercontent.com/57002207/147270294-de0ec3f9-7bfa-4c63-84de-b4239fd4995e.gif" alt = "demo">
 </p>
 
+
+
+- [👶 Dependencies](#-dependencies)
+- [🛠️ Installation](#️-installation)
+- [⚙️ Setup](#️-setup)
+- [🚀 Usage](#-usage)
+
+
+
 ## 👶 Dependencies
 * [Python 3.7 or higher](https://www.python.org/downloads/)
 
@@ -63,7 +72,7 @@ headspace packs --all --exclude links.txt
 ```
 This would download all packs except the ones in `links.txt` file
 
-## Downloading specific Headspace pack
+## Downloading specific pack
 ```sh
 headspace pack <PACK_URL> [Options]
 ```
@@ -140,6 +149,25 @@ headspace everyday --from 2021-03-01 --to 2021-03-20
 --out TEXT           Download directory
 --help               Show this message and exit.
 ```
+
+## Changing Language Preference
+By default the language is set to english. You could change to other languages supported by headspace. 
+Other Languages:
+- de-DE
+- es-ES
+- fr-FR
+- pt-BR
+
+To change the language modify the environment variable `HEADSPACE_LANG` and set the value to the langauge code.
+
+- For fish/bash shell `export HEADSPACE_LANG="fr-FR"`
+- Powershell `$env:DESIRED_LANGUAGE="fr-FR"`
+
+
+
+
+
+
 
 **If you encounter any issue or bug, open a new issue on [github](https://github.com/yashrathi-git/pyHeadspace)**
 
