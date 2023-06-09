@@ -31,7 +31,7 @@ EVERYDAY_URL = (
     "https://api.prod.headspace.com/content/view-models/everyday-headspace-banner"
 )
 GROUP_COLLECTION = "https://api.prod.headspace.com/content/group-collections"
-DESIRED_LANGUAGE = os.getenv("HEADSPACE_LANG", "en-US")
+DESIRED_LANGUAGE = os.getenv("HEADSPACE_LANG", "fr-FR")
 
 if not os.path.exists(BEARER):
     with open(BEARER, "w") as file:
@@ -66,7 +66,7 @@ headers = {
 
 console = Console()
 logger = logging.getLogger("pyHeadspace")
-
+logger.info("Desired language {}".format(DESIRED_LANGUAGE))
 
 session = requests.Session()
 session.headers.update(headers)
@@ -326,7 +326,7 @@ def download(
         raise click.BadOptionUsage("--out", f"'{out}' path not valid")
 
     if pack_name:
-        dir_path = os.path.join(out, pack_name)
+        dir_path = os.path.join(out, re.sub( r"[^A-Za-z0-9]", "", pack_name, 0))
         pattern = r"Session \d+ of (Level \d+)"
         level = re.findall(pattern, filename)
         if level:
@@ -334,10 +334,16 @@ def download(
 
         if is_technique:
             dir_path = os.path.join(dir_path, "Techniques")
-        try:
+
+        if os.path.isdir(dir_path):
+            if not os.listdir(dir_path):
+                console.print(f"'{dir_path}' already exists [red] not creating...[/red]")
+            else:    
+                pass
+        else:
+            console.print(f"'{dir_path}' path")
             os.makedirs(dir_path)
-        except FileExistsError:
-            pass
+
         filepath = os.path.join(dir_path, filename)
     else:
         if not os.path.exists(out) and out != "":
