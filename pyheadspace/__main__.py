@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import eyed3
 from datetime import date, datetime, timedelta
 from typing import List, Optional, Union
 
@@ -31,7 +32,6 @@ EVERYDAY_URL = (
     "https://api.prod.headspace.com/content/view-models/everyday-headspace-banner"
 )
 GROUP_COLLECTION = "https://api.prod.headspace.com/content/group-collections"
-DESIRED_LANGUAGE = os.getenv("HEADSPACE_LANG", "en-US")
 
 if not os.path.exists(BEARER):
     with open(BEARER, "w") as file:
@@ -50,27 +50,10 @@ if BEARER_ID:
 else:
     USER_ID = ""
 
-headers = {
-    "authority": "api.prod.headspace.com",
-    "accept": "application/vnd.api+json",
-    "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.72 Safari/537.36",
-    "authorization": BEARER_ID,
-    "hs-languagepreference": DESIRED_LANGUAGE,
-    "sec-gpc": "1",
-    "origin": "https://my.headspace.com",
-    "sec-fetch-site": "same-site",
-    "sec-fetch-mode": "cors",
-    "referer": "https://my.headspace.com/",
-    "accept-language": "en-US,en;q=0.9",
-}
-
 console = Console()
 logger = logging.getLogger("pyHeadspace")
 
-
 session = requests.Session()
-session.headers.update(headers)
-
 
 URL_GROUP_CMD = [
     click.option("--id", type=int, default=0, help="ID of video."),
@@ -87,7 +70,35 @@ COMMON_CMD = [
         multiple=True,
     ),
     click.option("--out", default="", help="Download directory"),
+    click.option("--language", default="en-US", help="Language of audio files"),
 ]
+
+def init_header(bearer: str, language: str) -> None:
+    """
+    Update session headers with authorization and language preference.
+    """
+
+    # Define headers with necessary information
+    headers = {
+        "authority": "api.prod.headspace.com",
+        "accept": "application/vnd.api+json",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 \
+            (KHTML, like Gecko) Chrome/89.0.4389.72 Safari/537.36",
+        "authorization": bearer,
+        "hs-languagepreference": language,
+        "sec-gpc": "1",
+        "origin": "https://my.headspace.com",
+        "sec-fetch-site": "same-site",
+        "sec-fetch-mode": "cors",
+        "referer": "https://my.headspace.com/",
+        "accept-language": "en-US,en;q=0.9",
+    }
+
+    # Update session headers with the defined headers
+    session.headers.update(headers)
+
+    # Log the desired language
+    logger.info("Desired language {}".format(language))
 
 
 def shared_cmd(cmd):
@@ -184,6 +195,7 @@ def get_pack_attributes(
     no_techniques: bool,
     no_meditation: bool,
     all_: bool = False,
+    check: bool = False
 ):
     response = request_url(PACK_URL, id=pack_id)
     attributes: dict = response["data"]["attributes"]
@@ -191,7 +203,7 @@ def get_pack_attributes(
     # Because it's only used for filenames, and | is mostly not allowed in filenames
     _pack_name = _pack_name.replace("|", "-")
 
-    if all_:
+    if all_ and not check:
         exists = os.path.exists(os.path.join(out, _pack_name))
         if exists:
             console.print(f"{_pack_name} already exists [red]skipping... [/red]")
@@ -267,12 +279,14 @@ def download_pack_session(
     filename_suffix=None,
 ):
     response = request_url(AUDIO_URL, id=id)
-
     signed_url = get_signed_url(response, duration=duration)
     for name, direct_url in signed_url.items():
         if filename_suffix:
             name += filename_suffix
-        download(direct_url, name, filename=name, pack_name=pack_name, out=out)
+        filePath=download(direct_url, name, filename=name, pack_name=pack_name, out=out)
+        if(filePath):
+            addTags(filePath,name,pack_name,id)
+
 
 
 def download_pack_techniques(
@@ -326,7 +340,8 @@ def download(
         raise click.BadOptionUsage("--out", f"'{out}' path not valid")
 
     if pack_name:
-        dir_path = os.path.join(out, pack_name)
+        # Clean folder name
+        dir_path = os.path.join(out, re.sub( r"[^A-Za-z0-9]", "", pack_name, 0))
         pattern = r"Session \d+ of (Level \d+)"
         level = re.findall(pattern, filename)
         if level:
@@ -334,10 +349,10 @@ def download(
 
         if is_technique:
             dir_path = os.path.join(dir_path, "Techniques")
-        try:
+
+        if not os.path.isdir(dir_path):
             os.makedirs(dir_path)
-        except FileExistsError:
-            pass
+
         filepath = os.path.join(dir_path, filename)
     else:
         if not os.path.exists(out) and out != "":
@@ -376,7 +391,39 @@ def download(
         console.print(f"[red]Failed to download {filename}[/red]\n")
         logger.error(f"Failed to download {filename}")
         os.remove(filepath)
+        return False
+    else:
+        return filepath
 
+def addTags(filepath: str,title:str,album:str,track_number:int=0,total_tracks:int=0):
+    """
+    Adds tags to an audio file specified by `filepath`. The tags added include 
+    `title`, `album`, `artist`, and `track_num` (if `total_tracks` and 
+    `track_number` are provided). 
+
+    Args:
+        filepath (str): The path to the audio file.
+        title (str): The title of the audio file.
+        album (str): The name of the album the audio file belongs to.
+        track_number (int, optional): The track number of the audio file. 
+            Defaults to 0.
+        total_tracks (int, optional): The total number of tracks in the album. 
+            Defaults to 0.
+
+    Returns:
+        None
+    """
+    audiofile = eyed3.load(filepath)
+    if not audiofile.tag:
+        audiofile.initTag()
+    audiofile.tag.title = title
+    audiofile.tag.album = album
+    audiofile.tag.artist = "headspace"
+    if(total_tracks!=0 and track_number!=0):
+        audiofile.tag.track_num = (track_number, total_tracks)
+    elif(total_tracks==0 and track_number!=0):
+        audiofile.tag.track_num = track_number
+    audiofile.tag.save()
 
 def find_id(pattern: str, url: str):
     try:
@@ -447,6 +494,11 @@ def get_legacy_id(new_id):
 @click.option(
     "--all", "all_", default=False, is_flag=True, help="Downloads all headspace packs."
 )
+
+@click.option(
+    "--check", "check", default=False, is_flag=True, help="Check all headspace packs."
+)
+
 @click.option(
     "--exclude",
     "-e",
@@ -467,10 +519,13 @@ def pack(
     url: str,
     all_: bool,
     exclude: str,
+    check: bool,
+    language: str,
 ):
     """
     Download headspace packs with techniques videos.
     """
+    initHeader(BEARER_ID, language)
 
     duration = list(set(duration))
     pattern = r"my.headspace.com/modes/(?:meditate|focus)/content/([0-9]+)"
@@ -489,6 +544,7 @@ def pack(
             out=out,
             no_meditation=no_meditation,
             no_techniques=no_techniques,
+            check=check,
         )
     else:
         excluded = []
@@ -519,6 +575,7 @@ def pack(
                     no_meditation=no_meditation,
                     no_techniques=no_techniques,
                     all_=True,
+                    check=check,
                 )
             else:
                 logger.info(f"Skipping ID: {pack_id} as it is excluded")
@@ -527,11 +584,11 @@ def pack(
 @cli.command("download")
 @shared_cmd(COMMON_CMD)
 @click.argument("url", type=str)
-def download_single(url: str, out: str, duration: Union[list, tuple]):
+def download_single(url: str, out: str, duration: Union[list, tuple], language:str):
     """
     Download single headspace session.
     """
-
+    initHeader(BEARER_ID,language)
     pattern = r"my.headspace.com/player/([0-9]+)"
     try:
         pack_id = find_id(pattern, url)
@@ -604,10 +661,11 @@ def write_bearer(bearer_id):
     help="Download till a specific date. DATE-FORMAT=>yyyy-mm-dd",
 )
 @shared_cmd(COMMON_CMD)
-def everyday(_from: str, to: str, duration: Union[list, tuple], out: str):
+def everyday(_from: str, to: str, duration: Union[list, tuple], out: str, language:str):
     """
     Download everyday headspace.
     """
+    initHeader(BEARER_ID,language)
     userid = USER_ID
     date_format = "%Y-%m-%d"
     _from = datetime.strptime(_from, date_format).date()
@@ -623,7 +681,9 @@ def everyday(_from: str, to: str, duration: Union[list, tuple], out: str):
         signed_url = get_signed_url(response, duration=duration)
 
         for name, direct_url in signed_url.items():
-            download(direct_url, name, filename=name, out=out)
+            filePath=download(direct_url, name, filename=name, out=out)
+            if(filePath):
+                addTags(filePath,name,"everyday")
         _from += timedelta(days=1)
 
 
@@ -636,5 +696,6 @@ def login():
     write_bearer(bearer_token)
     console.print("[green]:heavy_check_mark:[/green] Logged in successfully!")
 
-
+# For launch program directly, useful for debugging
+cli()
 session.close()
