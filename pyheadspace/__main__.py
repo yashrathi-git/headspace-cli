@@ -525,7 +525,7 @@ def pack(
     """
     Download headspace packs with techniques videos.
     """
-    initHeader(BEARER_ID, language)
+    init_header(BEARER_ID, language)
 
     duration = list(set(duration))
     pattern = r"my.headspace.com/modes/(?:meditate|focus)/content/([0-9]+)"
@@ -588,7 +588,7 @@ def download_single(url: str, out: str, duration: Union[list, tuple], language:s
     """
     Download single headspace session.
     """
-    initHeader(BEARER_ID,language)
+    init_header(BEARER_ID,language)
     pattern = r"my.headspace.com/player/([0-9]+)"
     try:
         pack_id = find_id(pattern, url)
@@ -665,7 +665,7 @@ def everyday(_from: str, to: str, duration: Union[list, tuple], out: str, langua
     """
     Download everyday headspace.
     """
-    initHeader(BEARER_ID,language)
+    init_header(BEARER_ID,language)
     userid = USER_ID
     date_format = "%Y-%m-%d"
     _from = datetime.strptime(_from, date_format).date()
