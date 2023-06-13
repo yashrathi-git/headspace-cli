@@ -1,3 +1,4 @@
+import time
 import logging
 import os
 import re
@@ -15,6 +16,9 @@ from urllib.parse import urlparse, parse_qs
 from rich.traceback import install
 
 from pyheadspace.auth import authenticate, prompt
+
+# Counter error
+COUNTER_ERROR = 0
 
 # For better tracebacks
 install()
@@ -140,13 +144,19 @@ def request_url(
         logger.info("Sending GET request to {}".format(url))
 
     response = session.get(url, params=params)
+    response_js: dict = {}
     try:
-        response_js: dict = response.json()
+        response_js = response.json()
     except Exception as e:
+        global COUNTER_ERROR
         logger.critical(f"status code {response.status_code}")
         logger.critical(f"error: {e}")
         console.print(f"status code {response.status_code}")
-        raise click.Abort()
+        COUNTER_ERROR += 1
+        if(COUNTER_ERROR > 5):
+            raise click.Abort()
+        else:
+            time.sleep(COUNTER_ERROR*2)
     if not response.ok:
         if "errors" in response_js.keys():
             errors = response_js["errors"]
