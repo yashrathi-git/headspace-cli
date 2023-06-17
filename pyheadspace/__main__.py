@@ -698,8 +698,23 @@ def everyday(_from: str, to: str, duration: Union[list, tuple], out: str, langua
 
 
 @cli.command("login")
-def login():
-    email, password = prompt()
+@click.option(
+    "--email",
+    "_email",
+    type=str,
+    help="Email for login"
+)
+@click.option(
+    "--password",
+    "_password",
+    type=str,
+    help="Credentials for login"
+)
+def login(_email: str, _password: str):
+    if _email is not None and _password is not None:
+        email, password = _email, _password
+    else:    
+        email, password = prompt()
     bearer_token = authenticate(email, password)
     if not bearer_token:
         raise click.Abort()
