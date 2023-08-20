@@ -158,18 +158,9 @@ Other Languages:
 - fr-FR
 - pt-BR
 
-To change the language modify the environment variable `HEADSPACE_LANG` and set the value to the langauge code.
-
-- For fish/bash shell `export HEADSPACE_LANG="fr-FR"`
-- Powershell `$env:DESIRED_LANGUAGE="fr-FR"`
-
-
-
-
-
+```
+--language TEXT       Language of audio files
+```
 
 
 **If you encounter any issue or bug, open a new issue on [github](https://github.com/yashrathi-git/pyHeadspace)**
-
-
-
