@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import eyed3
+import random
 from datetime import date, datetime, timedelta
 from typing import List, Optional, Union
 
@@ -123,6 +124,8 @@ def check_bearer_id(bearer_id):
 def get_group_ids():
     params = {"category": "PACK_GROUP", "limit": "-1"}
     response = request_url(GROUP_COLLECTION, params=params)
+    if (not response) :
+        return
     data = response["included"]
     pack_ids = []
     for item in data:
@@ -153,7 +156,7 @@ def request_url(
         logger.critical(f"error: {e}")
         console.print(f"status code {response.status_code}")
         COUNTER_ERROR += 1
-        if(COUNTER_ERROR > 5):
+        if(COUNTER_ERROR > 20):
             raise click.Abort()
         else:
             time.sleep(COUNTER_ERROR*2)
@@ -163,15 +166,20 @@ def request_url(
             logger.error(errors)
             if response.status_code == 401:
                 console.print(
-                    "\n[red]Unautorized : Unable to login to headspace account[/red]"
+                    "\n[red]Not Authenticated : Unable to login to headspace account[/red]"
                 )
                 console.print("Run [green]headspace login[/green] first.")
+            elif response.status_code == 403:
+                console.print(
+                    "\n[red]Unautorized : Not allow to access to resources[/red]"
+                )
             else:
                 console.print(errors)
         else:
             console.print(response_js)
             logger.error(response_js)
-        raise click.UsageError(f"HTTP error: status-code = {response.status_code}")
+        return
+        #raise click.UsageError(f"HTTP error: status-code = {response.status_code}")
     return response_js
 
 
@@ -208,6 +216,8 @@ def get_pack_attributes(
     check: bool = False
 ):
     response = request_url(PACK_URL, id=pack_id)
+    if (not response) :
+        return
     attributes: dict = response["data"]["attributes"]
     _pack_name: str = attributes["name"]
     # Because it's only used for filenames, and | is mostly not allowed in filenames
@@ -259,7 +269,11 @@ def get_signed_url(response: dict, duration: List[int]) -> dict:
 
         sign_id = item["id"]
         # Getting signed URL
-        direct_url = request_url(SIGN_URL, id=sign_id)["url"]
+        response = request_url(SIGN_URL, id=sign_id)
+        if (not response) :
+            return
+        
+        direct_url = response["url"]
         if len(duration) > 1:
             name += f"({duration_in_min} minutes)"
 
@@ -289,7 +303,10 @@ def download_pack_session(
     filename_suffix=None,
 ):
     response = request_url(AUDIO_URL, id=id)
+    if (not response) :
+        return
     signed_url = get_signed_url(response, duration=duration)
+
     for name, direct_url in signed_url.items():
         if filename_suffix:
             name += filename_suffix
@@ -307,6 +324,8 @@ def download_pack_techniques(
     filename_suffix=None,
 ):
     response = request_url(TECHNIQUE_URL, id=technique_id)
+    if (not response) :
+        return
     name = response["data"]["attributes"]["name"]
     if filename_suffix:
         name += filename_suffix
@@ -316,6 +335,9 @@ def download_pack_techniques(
         if item["attributes"]["mimeType"] == "video/mp4":
             sign_id = item["id"]
             break
+    response = request_url(SIGN_URL, id=sign_id)
+    if (not response) :
+        return
     direct_url = request_url(SIGN_URL, id=sign_id)["url"]
     download(
         direct_url, name, filename=name, pack_name=pack_name, out=out, is_technique=True
@@ -485,6 +507,8 @@ def get_legacy_id(new_id):
     logger.info("Getting entity ID")
     url = "https://api.prod.headspace.com/content-aggregation/v2/content/view-models/content-info/skeleton"
     response = request_url(url, params={"contentId": new_id, "userId": USER_ID})
+    if (not response) :
+        return
     return response["entityId"]
 
 
@@ -575,6 +599,7 @@ def pack(
         logger.info("Downloading all packs")
 
         group_ids = get_group_ids()
+        random.shuffle(group_ids) # more resilient
 
         for pack_id in group_ids:
             if pack_id not in excluded:
@@ -613,6 +638,8 @@ def download_single(url: str, out: str, duration: Union[list, tuple], language:s
         raise click.Abort("Unable to parse startIndex.")
 
     response = request_url(PACK_URL, id=pack_id)
+    if (not response) :
+        return
     attributes: dict = response["data"]["attributes"]
     pack_name: str = attributes["name"]
 
@@ -687,7 +714,8 @@ def everyday(_from: str, to: str, duration: Union[list, tuple], out: str, langua
             "userId": userid,
         }
         response = request_url(EVERYDAY_URL, params=params)
-
+        if (not response) :
+            return
         signed_url = get_signed_url(response, duration=duration)
 
         for name, direct_url in signed_url.items():
