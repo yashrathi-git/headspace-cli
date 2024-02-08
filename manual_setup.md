@@ -9,7 +9,7 @@ After we have installed `pyheadspace`, this is important step to set it up:
 2. Press `Ctrl + Shift + I` or `Command + Shift + C` to open dev tools
 3. Go to the networks tab and **reload the website**
 4. Now look for GET request to https://api.prod.headspace.com
-5. In **request header** copy the value of authorization parameter. **Make sure you copy it from request headers not response headers**. It would look like this:
+5. In **request header** copy the value of authorization parameter **including the `Bearer` prefix**. **Make sure you copy it from request headers not response headers**. It would look like this:
    ```
    bearer eyJhbGciOi...
    ```
