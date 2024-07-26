@@ -184,6 +184,7 @@ def get_pack_attributes(
     no_techniques: bool,
     no_meditation: bool,
     all_: bool = False,
+    author: Optional[int] = None,
 ):
     response = request_url(PACK_URL, id=pack_id)
     attributes: dict = response["data"]["attributes"]
@@ -209,11 +210,13 @@ def get_pack_attributes(
         if item["type"] == "orderedActivities":
             if not no_meditation:
                 id = item["relationships"]["activity"]["data"]["id"]
-                download_pack_session(id, duration, _pack_name, out=out)
+                download_pack_session(id, duration, _pack_name, out=out, author=author)
         elif item["type"] == "orderedTechniques":
             if not no_techniques:
                 id = item["relationships"]["technique"]["data"]["id"]
-                download_pack_techniques(id, pack_name=_pack_name, out=out)
+                download_pack_techniques(
+                    id, pack_name=_pack_name, out=out, author=author
+                )
 
 
 def get_signed_url(response: dict, duration: List[int]) -> dict:
@@ -265,8 +268,10 @@ def download_pack_session(
     pack_name: Optional[str],
     out: str,
     filename_suffix=None,
+    author: Optional[int] = None,
 ):
-    response = request_url(AUDIO_URL, id=id)
+    params = dict(authorId=author) if author else dict()
+    response = request_url(AUDIO_URL, id=id, params=params)
 
     signed_url = get_signed_url(response, duration=duration)
     for name, direct_url in signed_url.items():
@@ -281,8 +286,10 @@ def download_pack_techniques(
     pack_name: Optional[str] = None,
     out: str,
     filename_suffix=None,
+    author: Optional[int] = None,
 ):
-    response = request_url(TECHNIQUE_URL, id=technique_id)
+    params = dict(authorId=author) if author else dict()
+    response = request_url(TECHNIQUE_URL, id=technique_id, params=params)
     name = response["data"]["attributes"]["name"]
     if filename_suffix:
         name += filename_suffix
@@ -456,6 +463,16 @@ def get_legacy_id(new_id):
         " links of packs to exclude downloading. Every link should be on separate line."
     ),
 )
+@click.option(
+    "--author",
+    "-a",
+    type=int,
+    default=0,
+    help=(
+        "Use to choose the author/narrator that you'd like to download the files of."
+        "NOTE: If the author ID is not found, the default will download."
+    ),
+)
 @shared_cmd(COMMON_CMD)
 @shared_cmd(URL_GROUP_CMD)
 def pack(
@@ -467,6 +484,7 @@ def pack(
     url: str,
     all_: bool,
     exclude: str,
+    author: int,
 ):
     """
     Download headspace packs with techniques videos.
@@ -489,6 +507,7 @@ def pack(
             out=out,
             no_meditation=no_meditation,
             no_techniques=no_techniques,
+            author=author,
         )
     else:
         excluded = []
@@ -638,3 +657,6 @@ def login():
 
 
 session.close()
+
+if __name__ == "__main__":
+    cli()

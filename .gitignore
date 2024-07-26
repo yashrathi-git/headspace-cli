@@ -14,3 +14,6 @@
 /pyheadspace/test.html
 /venv/
 .idea
+
+.env
+launch.json
