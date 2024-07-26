@@ -92,6 +92,10 @@ headspace pack https://my.headspace.com/modes/meditate/content/151 -d 20 -d 15
 ```sh
 --id INTEGER         ID of video.
 -d, --duration TEXT  Duration or list of duration
+-a --author INTEGER  The author ID that you\'d like to get the audio from.
+                    You can get the author ID from a few places, including
+                    input label you find when inspecting element on the pack
+                    page.             
 --no_meditation      Only download meditation session without techniques
                     videos.
 --no_techniques      Only download techniques and not meditation sessions.
