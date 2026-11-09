@@ -27,6 +27,17 @@ AUDIO_URL = "https://api.prod.headspace.com/content/activities/{}"
 PACK_URL = "https://api.prod.headspace.com/content/activity-groups/{}"
 SIGN_URL = "https://api.prod.headspace.com/content/media-items/{}/make-signed-url"
 TECHNIQUE_URL = "https://api.prod.headspace.com/content/techniques/{}"
+PLAYABLE_ASSETS_URL = (
+    "https://api.prod.headspace.com/content-interface/v3/playable-assets"
+)
+SLEEPCAST_CATALOG_URL = (
+    "https://api.prod.headspace.com/content-aggregation/v2/content/view-models/"
+    "library/topics-category-menu"
+)
+MEDIA_DOWNLOAD_URL = (
+    "https://api.prod.headspace.com/content-aggregation/v1/content/media-items/{}"
+    "/download"
+)
 EVERYDAY_URL = (
     "https://api.prod.headspace.com/content/view-models/everyday-headspace-banner"
 )
@@ -313,10 +324,12 @@ def download(
     pack_name: Optional[str] = None,
     out: str,
     is_technique: bool = False,
+    authenticated: bool = False,
 ):
     console.print(f"[green]Downloading {name}[/green]")
     logger.info(f"Sending GET request to {direct_url}")
-    media = requests.get(direct_url, stream=True)
+    client = session if authenticated else requests
+    media = client.get(direct_url, stream=True)
 
     if not media.ok:
         media_json = media.json()
@@ -375,7 +388,7 @@ def download(
                 f"[red]Download failed. Retrying {failed_tries} out of {max_tries}...[/red]",
             )
             media.close()
-            media = requests.get(direct_url, stream=True)
+            media = client.get(direct_url, stream=True)
         else:
             break
 
@@ -393,6 +406,187 @@ def find_id(pattern: str, url: str):
     except IndexError:
         raise click.UsageError("Cannot find the ID. Use --id option to provide the ID.")
     return id
+
+
+def find_sleepcast_id(url: str):
+    patterns = (
+        r"my\.headspace\.com/modes/(?:sleep|explore)/content/([0-9]+)",
+        r"(?:www\.)?headspace\.com/content/sleepcast/[^/]+/([0-9]+)",
+    )
+    for pattern in patterns:
+        content_ids = re.findall(pattern, url)
+        if content_ids:
+            return int(content_ids[-1])
+    return None
+
+
+def get_sleepcast_assets(content_id: int, playback_date: Optional[str] = None):
+    if playback_date:
+        try:
+            date.fromisoformat(playback_date)
+        except ValueError:
+            raise click.BadParameter(
+                "Date must use YYYY-MM-DD format.", param_hint="--date"
+            )
+    else:
+        playback_date = datetime.now().astimezone().isoformat(timespec="seconds")
+
+    params = {
+        "contentId": content_id,
+        "date": playback_date,
+        "parentContentId": "",
+        "audioDescriptionEnabled": "false",
+    }
+    response = session.get(PLAYABLE_ASSETS_URL, params=params)
+    try:
+        assets = response.json()
+    except ValueError:
+        raise click.UsageError(
+            f"Headspace returned an unexpected response ({response.status_code})."
+        )
+
+    if not response.ok:
+        if response.status_code == 401:
+            raise click.UsageError(
+                "Headspace login has expired. Run 'headspace login' again."
+            )
+        raise click.UsageError(
+            f"Unable to load Sleepcast tracks (status {response.status_code}): "
+            f"{assets}"
+        )
+
+    if not isinstance(assets, list):
+        raise click.UsageError("Headspace returned invalid Sleepcast track data.")
+
+    sleepcast_assets = {}
+    for asset in assets:
+        track_type = (asset.get("metadata") or {}).get("trackType", "").lower()
+        if track_type in ("mixed", "voice", "ambience"):
+            sleepcast_assets[track_type] = asset
+
+    if not sleepcast_assets:
+        raise click.UsageError(
+            "This Headspace content is not a Sleepcast with separate audio tracks."
+        )
+    return sleepcast_assets
+
+
+def get_sleepcast_catalog():
+    if not USER_ID:
+        raise click.UsageError(
+            "Unable to identify the Headspace user. Run 'headspace login' again."
+        )
+
+    params = {"userId": USER_ID, "topicId": 41, "location": "SLEEP"}
+    response = session.get(SLEEPCAST_CATALOG_URL, params=params)
+    try:
+        catalog = response.json()
+    except ValueError:
+        raise click.UsageError(
+            f"Headspace returned an unexpected response ({response.status_code})."
+        )
+
+    if not response.ok:
+        if response.status_code == 401:
+            raise click.UsageError(
+                "Headspace login has expired. Run 'headspace login' again."
+            )
+        raise click.UsageError(
+            f"Unable to load the Sleepcast catalog (status {response.status_code}): "
+            f"{catalog}"
+        )
+
+    sleepcasts = {}
+    for category in catalog.get("categories", []):
+        for item in category.get("contentTiles", []):
+            if item.get("contentType") == "SLEEPCAST" and item.get("contentId"):
+                sleepcasts[item["contentId"]] = item
+
+    if not sleepcasts:
+        raise click.UsageError("Headspace returned an empty Sleepcast catalog.")
+    return sorted(sleepcasts.values(), key=lambda item: item.get("title", "").casefold())
+
+
+def download_sleepcast(
+    content_id: int,
+    *,
+    track: str,
+    container: str,
+    playback_date: Optional[str],
+    out: str,
+):
+    assets = get_sleepcast_assets(content_id, playback_date)
+    requested_tracks = ("mixed", "voice", "ambience") if track == "all" else (track,)
+    missing_tracks = [name for name in requested_tracks if name not in assets]
+    if missing_tracks:
+        raise click.UsageError(
+            "Headspace did not provide the requested track(s): "
+            + ", ".join(missing_tracks)
+        )
+
+    first_asset = assets[requested_tracks[0]]
+    title = first_asset.get("analyticsData", {}).get("content_name")
+    title = title or f"Sleepcast {content_id}"
+    title = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "-", title).strip(" .")
+
+    for track_name in requested_tracks:
+        asset = assets[track_name]
+        media_id = asset.get("mediaItemId")
+        if not media_id:
+            raise click.UsageError(
+                f"Headspace did not provide a media ID for the {track_name} track."
+            )
+
+        suffix = f" - {track_name.title()}" if track != "mixed" else ""
+        filename = title + suffix
+        media_url = MEDIA_DOWNLOAD_URL.format(media_id) + f"?container={container}"
+        download(
+            media_url,
+            filename,
+            filename=filename,
+            out=out,
+            authenticated=True,
+        )
+
+
+def download_all_sleepcasts(
+    *,
+    track: str,
+    container: str,
+    playback_date: Optional[str],
+    out: str,
+    sleepcasts=None,
+):
+    if sleepcasts is None:
+        sleepcasts = get_sleepcast_catalog()
+    if out:
+        os.makedirs(out, exist_ok=True)
+
+    failures = []
+    for index, sleepcast in enumerate(sleepcasts, 1):
+        content_id = sleepcast["contentId"]
+        title = sleepcast.get("title") or f"Sleepcast {content_id}"
+        console.print(f"\n[bold][{index}/{len(sleepcasts)}][/bold] {title}")
+        try:
+            download_sleepcast(
+                content_id,
+                track=track,
+                container=container,
+                playback_date=playback_date,
+                out=out,
+            )
+        except (click.ClickException, requests.RequestException) as error:
+            failures.append((title, str(error)))
+            console.print(f"[red]Failed: {error}[/red]")
+
+    console.print(f"\nProcessed {len(sleepcasts)} Sleepcasts.", style="green")
+    if failures:
+        console.print(f"{len(failures)} download(s) failed:", style="red")
+        for title, error in failures:
+            console.print(f"- {title}: {error}")
+        raise click.ClickException(
+            "Some Sleepcasts failed. Re-run the command to retry missing files."
+        )
 
 
 @click.group()
@@ -545,11 +739,48 @@ def pack(
 
 @cli.command("download")
 @shared_cmd(COMMON_CMD)
+@click.option(
+    "--track",
+    type=click.Choice(["mixed", "voice", "ambience", "all"], case_sensitive=False),
+    default="mixed",
+    show_default=True,
+    help="Sleepcast track to download.",
+)
+@click.option(
+    "--container",
+    type=click.Choice(["mp3", "aac"], case_sensitive=False),
+    default="mp3",
+    show_default=True,
+    help="Sleepcast audio format.",
+)
+@click.option(
+    "--date",
+    "playback_date",
+    help="Sleepcast variation date in YYYY-MM-DD format.",
+)
 @click.argument("url", type=str)
-def download_single(url: str, out: str, duration: Union[list, tuple]):
+def download_single(
+    url: str,
+    out: str,
+    duration: Union[list, tuple],
+    track: str,
+    container: str,
+    playback_date: Optional[str],
+):
     """
     Download single headspace session.
     """
+
+    sleepcast_id = find_sleepcast_id(url)
+    if sleepcast_id:
+        download_sleepcast(
+            sleepcast_id,
+            track=track.lower(),
+            container=container.lower(),
+            playback_date=playback_date,
+            out=out,
+        )
+        return
 
     pattern = r"my.headspace.com/player/([0-9]+)"
     try:
@@ -580,6 +811,57 @@ def download_single(url: str, out: str, duration: Union[list, tuple]):
         download_pack_techniques(
             id, pack_name=None, out=out, filename_suffix=" - {}".format(pack_name)
         )
+
+
+@cli.command("sleepcasts")
+@click.option("--all", "all_", is_flag=True, help="Download every Sleepcast.")
+@click.option("--yes", is_flag=True, help="Skip the bulk-download confirmation.")
+@click.option("--out", default="", help="Download directory.")
+@click.option(
+    "--track",
+    type=click.Choice(["mixed", "voice", "ambience", "all"], case_sensitive=False),
+    default="mixed",
+    show_default=True,
+    help="Sleepcast track to download.",
+)
+@click.option(
+    "--container",
+    type=click.Choice(["mp3", "aac"], case_sensitive=False),
+    default="mp3",
+    show_default=True,
+    help="Sleepcast audio format.",
+)
+@click.option(
+    "--date",
+    "playback_date",
+    help="Sleepcast variation date in YYYY-MM-DD format.",
+)
+def download_sleepcasts(all_, yes, out, track, container, playback_date):
+    """Download the complete Sleepcast catalog."""
+    if not all_:
+        raise click.UsageError("Use --all to download the complete Sleepcast catalog.")
+
+    sleepcasts = get_sleepcast_catalog()
+    sleepcast_count = len(sleepcasts)
+    if not yes:
+        size_warning = (
+            "This may require well over 10 GB."
+            if track.lower() == "all"
+            else "This may require several GB."
+        )
+        confirmed = click.confirm(
+            f"Download {sleepcast_count} Sleepcasts? {size_warning}", default=False
+        )
+        if not confirmed:
+            raise click.Abort()
+
+    download_all_sleepcasts(
+        track=track.lower(),
+        container=container.lower(),
+        playback_date=playback_date,
+        out=out,
+        sleepcasts=sleepcasts,
+    )
 
 
 @cli.command("file")
