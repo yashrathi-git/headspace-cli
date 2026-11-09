@@ -1,12 +1,11 @@
-import json
 import re
+from urllib.parse import parse_qs, urljoin, urlparse
 
 import requests
 from rich.console import Console
 
-LOGIN_URL = "https://www.headspace.com/login"
-AUTH_URL = "https://auth.headspace.com/co/authenticate"
-BEARER_TOKEN_URL = "https://auth.headspace.com/authorize"
+LOGIN_URL = "https://my.headspace.com/"
+TOKEN_URL = "https://auth.headspace.com/oauth/token"
 
 session = requests.Session()
 console = Console()
@@ -26,8 +25,34 @@ session.headers.update(headers)
 
 def get_client_id():
     response = session.get(LOGIN_URL)
-    client_id = re.findall(r'"clientId":"(.+?)",', response.text)[0]
-    return client_id
+    response.raise_for_status()
+
+    # Headspace's current login flow redirects through Auth0's /authorize
+    # endpoint, where the client ID is a query parameter.
+    for redirect in reversed([*response.history, response]):
+        client_ids = parse_qs(urlparse(redirect.url).query).get("client_id")
+        if client_ids:
+            return client_ids[0]
+
+    match = re.search(r"clientId\s*:\s*[`\"']([^`\"']+)", response.text)
+    if match:
+        return match.group(1)
+
+    # The current app keeps its Auth0 settings in a generated config bundle.
+    config_path = re.search(
+        r'(?:src|href)=["\']([^"\']*configHelpers[^"\']*\.js)["\']',
+        response.text,
+    )
+    if config_path:
+        config_response = session.get(urljoin(response.url, config_path.group(1)))
+        config_response.raise_for_status()
+        match = re.search(
+            r"clientId\s*:\s*[`\"']([^`\"']+)", config_response.text
+        )
+        if match:
+            return match.group(1)
+
+    raise RuntimeError("Headspace login did not provide an Auth0 client ID")
 
 
 def prompt():
@@ -37,48 +62,41 @@ def prompt():
     return email, password
 
 
-def get_bearer_token(client_id, login_ticket):
-    params = {
-        "client_id": client_id,
-        "response_type": "token",
-        "response_mode": "web_message",
-        "redirect_uri": "https://www.headspace.com/auth",
-        "scope": "openid email",
-        "audience": "https://api.prod.headspace.com",
-        "realm": "User-Password-Headspace",
-        "login_ticket": login_ticket,
-        "prompt": "none",
-    }
-    response = session.get(BEARER_TOKEN_URL, params=params)
-    html = response.text
-    bearer_token = re.findall(r'"access_token":"(.+?)"', html)[0]
-    return bearer_token
-
-
 def authenticate(email, password):
+    try:
+        client_id = get_client_id()
+    except (requests.RequestException, RuntimeError) as error:
+        console.print(f"Unable to start Headspace login: {error}", style="red")
+        return False
+
     data = {
-        "client_id": get_client_id(),
+        "grant_type": "http://auth0.com/oauth/grant-type/password-realm",
+        "client_id": client_id,
         "username": email,
         "password": password,
         "realm": "User-Password-Headspace",
-        "credential_type": "http://auth0.com/oauth/grant-type/password-realm",
+        "audience": "https://api.prod.headspace.com",
+        "scope": "openid email",
     }
-    response = session.post(
-        AUTH_URL,
-        headers=headers,
-        data=json.dumps(data),
-    )
-    resp_json: dict = response.json()
+
+    response = session.post(TOKEN_URL, json=data)
     try:
-        login_ticket = resp_json["login_ticket"]
-    except KeyError:
-        if "error" in resp_json.keys():
-            console.print(resp_json["error"], style="red")
-            if "error_description" in resp_json.keys():
-                console.print(resp_json["error_description"])
-        else:
-            console.print(resp_json)
+        resp_json: dict = response.json()
+    except ValueError:
+        console.print(
+            f"Headspace login returned an unexpected response ({response.status_code})",
+            style="red",
+        )
         return False
-    bearer_token = get_bearer_token(data["client_id"], login_ticket)
-    bearer_token = "bearer " + bearer_token
-    return bearer_token
+
+    access_token = resp_json.get("access_token")
+    if access_token:
+        return "bearer " + access_token
+
+    if "error" in resp_json:
+        console.print(resp_json["error"], style="red")
+        if "error_description" in resp_json:
+            console.print(resp_json["error_description"])
+    else:
+        console.print(resp_json)
+    return False
