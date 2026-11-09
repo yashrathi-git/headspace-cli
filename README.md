@@ -113,6 +113,31 @@ headspace pack https://my.headspace.com/modes/meditate/content/151 -d 20 -d 15
 headspace download <SESSION_URL> [options]
 ```
 
+Sleepcasts use Headspace's separate voice and ambience tracks. Download the mixed
+track (the default), one split track, or all three current assets:
+
+```sh
+headspace download https://my.headspace.com/modes/sleep/content/412
+headspace download https://my.headspace.com/modes/sleep/content/412 --track voice
+headspace download https://my.headspace.com/modes/sleep/content/412 --track ambience
+headspace download https://my.headspace.com/modes/sleep/content/412 --track all
+```
+
+Use `--container aac` for AAC instead of MP3. `--date YYYY-MM-DD` selects the
+Sleepcast variation for a particular date.
+
+Download the complete Sleepcast catalog (existing files are skipped, so this is
+safe to resume):
+
+```sh
+mkdir -p sleepcasts
+headspace sleepcasts --all --out ./sleepcasts
+```
+
+The mixed-track catalog requires several gigabytes. `--track all` downloads the
+mixed, voice, and ambience assets and can require well over 10 GB. The bulk
+command asks for confirmation unless `--yes` is supplied.
+
 
 <br />
 
@@ -125,6 +150,9 @@ $ headspace download https://my.headspace.com/player/204?authorId=1&contentId=15
 --out TEXT           Download directory.
 --id INTEGER         ID of the video. Not required if URL is provided.
 -d, --duration       Duration or list of duration
+--track TEXT         Sleepcast track: mixed, voice, ambience, or all
+--container TEXT     Sleepcast audio format: mp3 or aac
+--date TEXT          Sleepcast variation date (YYYY-MM-DD)
 --help               Show this message and exit.
 ```
 
@@ -174,6 +202,3 @@ To change the language modify the environment variable `HEADSPACE_LANG` and set 
 
 
 **If you encounter any issue or bug, open a new issue on [github](https://github.com/yashrathi-git/pyHeadspace)**
-
-
-
